@@ -1,0 +1,49 @@
+{
+  "name": "emit-keypress",
+  "description": "Drop-dead simple keypress event emitter for Node.js. Create powerful CLI applications and experiences with ease.",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "homepage": "https://github.com/jonschlinkert/emit-keypress",
+  "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
+  "repository": "jonschlinkert/emit-keypress",
+  "bugs": {
+    "url": "https://github.com/jonschlinkert/emit-keypress/issues"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "eslint": "npx eslint --ext .ts .",
+    "test": "ts-mocha -r esbuild-register 'test/**/*.ts'",
+    "tsup": "npx tsup"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "@typescript-eslint/eslint-plugin": "^7.13.1",
+    "@typescript-eslint/parser": "^7.13.1",
+    "esbuild-register": "^3.5.0",
+    "eslint": "^8.57.0",
+    "gulp-format-md": "^2.0.0",
+    "ts-mocha": "^10.0.0",
+    "tsconfig-paths": "^4.2.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.5.2"
+  },
+  "verb": {
+    "toc": false,
+    "layout": "default",
+    "tasks": [
+      "readme"
+    ],
+    "plugins": [
+      "gulp-format-md"
+    ],
+    "reflinks": [
+      "verb"
+    ],
+    "lint": {
+      "reflinks": true
+    }
+  }
+}
