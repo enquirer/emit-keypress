@@ -578,6 +578,7 @@ var emitKeypress = /* @__PURE__ */ __name(({
     throw new Error("Invalid stream passed");
   }
   const isRaw = input.isRaw;
+  let closed = false;
   let keyBuffer = [];
   let timeout = null;
   function emitBufferedKeypress() {
@@ -628,6 +629,7 @@ var emitKeypress = /* @__PURE__ */ __name(({
   }
   __name(emitBufferedKeypress, "emitBufferedKeypress");
   function handleKeypress(input2, key) {
+    closed = false;
     keyBuffer.push({ input: input2, key });
     clearTimeout(timeout);
     timeout = setTimeout(emitBufferedKeypress, bufferTimeout);
@@ -635,14 +637,17 @@ var emitKeypress = /* @__PURE__ */ __name(({
   __name(handleKeypress, "handleKeypress");
   emitKeypressEvents(input);
   function close() {
+    if (closed) return;
     if (input.isTTY) input.setRawMode(isRaw);
-    input.off("keypress", handleKeypress);
+    if (onKeypress) input.off("keypress", handleKeypress);
+    closed = true;
     input.pause();
   }
   __name(close, "close");
   if (input.isTTY) input.setRawMode(true);
   input.setEncoding("utf8");
-  input.on("keypress", handleKeypress);
+  if (onKeypress) input.on("keypress", handleKeypress);
+  input.once("pause", close);
   input.resume();
   return close;
 }, "emitKeypress");

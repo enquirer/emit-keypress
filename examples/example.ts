@@ -1,18 +1,11 @@
 import { emitKeypress } from '../index';
 
-const close = emitKeypress({
-  input: process.stdin,
-  keymap: [
-    { sequence: '\x03', shortcut: 'ctrl+c' },
-    { sequence: '\r', shortcut: 'return' }
-  ],
-  onKeypress: async (input, key) => {
-    console.log(key);
+emitKeypress({
+  onKeypress: async (input, key, close) => {
+    console.log({ input, key });
 
-    if (key.shortcut === 'return' || key.shortcut === 'ctrl+c') {
+    if (input === '\x03' || input === '\r') {
       close();
-      process.exit(-1);
     }
   }
 });
-

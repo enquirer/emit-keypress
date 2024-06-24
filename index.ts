@@ -20,6 +20,7 @@ export const emitKeypress = ({
   }
 
   const isRaw = input.isRaw;
+  let closed = false;
 
   // Buffering keypress events
   let keyBuffer: Array<{ input: string; key: readline.Key }> = [];
@@ -84,6 +85,7 @@ export const emitKeypress = ({
   }
 
   function handleKeypress(input: string, key: readline.Key) {
+    closed = false;
     keyBuffer.push({ input, key });
     clearTimeout(timeout);
     timeout = setTimeout(emitBufferedKeypress, bufferTimeout);
@@ -92,15 +94,18 @@ export const emitKeypress = ({
   emitKeypressEvents(input);
 
   function close() {
+    if (closed) return;
     if (input.isTTY) input.setRawMode(isRaw);
-    input.off('keypress', handleKeypress);
+    if (onKeypress) input.off('keypress', handleKeypress);
+    closed = true;
     input.pause();
   }
 
   // Disable automatic character echoing
   if (input.isTTY) input.setRawMode(true);
   input.setEncoding('utf8');
-  input.on('keypress', handleKeypress);
+  if (onKeypress) input.on('keypress', handleKeypress);
+  input.once('pause', close);
   input.resume();
   return close;
 };
