@@ -536,10 +536,10 @@ var isPrintableCharacter = /* @__PURE__ */ __name((s) => {
 var keycodes = [
   { sequence: "\r", shortcut: "return" },
   { sequence: "", shortcut: "ctrl+c", ctrl: true },
-  { sequence: "", shortcut: "ctrl+4", ctrl: true },
-  { sequence: "", shortcut: "ctrl+5", ctrl: true },
-  { sequence: "", shortcut: "ctrl+6", ctrl: true },
-  { sequence: "", shortcut: "ctrl+7", ctrl: true },
+  { sequence: "\x1B", shortcut: "ctrl+4", ctrl: true },
+  { sequence: "\x1B", shortcut: "ctrl+5", ctrl: true },
+  { sequence: "\x1B", shortcut: "ctrl+6", ctrl: true },
+  { sequence: "\x1B", shortcut: "ctrl+7", ctrl: true },
   { sequence: "\x1B[1;10A", shortcut: "shift+meta+up", code: "[1;10A", name: "up", meta: true, shift: true },
   { sequence: "\x1B[1;10B", shortcut: "shift+meta+down", code: "[1;10B", name: "down", meta: true, shift: true },
   { sequence: "\x1B[1;10C", shortcut: "shift+meta+right", code: "[1;10C", name: "left", meta: true, shift: true },
@@ -636,6 +636,9 @@ var emitKeypress = /* @__PURE__ */ __name(({
         shortcut: ""
       });
       let addShortcut = true;
+      if (typeof keymap === "function") {
+        keymap = keymap();
+      }
       for (const ele of keymap) {
         if (combinedKey.sequence === ele.sequence) {
           Object.assign(combinedKey, ele);

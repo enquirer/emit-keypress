@@ -13,12 +13,16 @@ function emitKeyCode(escapeCode) {
   process.stdin.push(decoded);
 }
 
-const close = emitKeypress({
+emitKeypress({
   input: process.stdin,
-  keymap: keycodes,
-  onKeypress: async (input, key) => {
+  keymap: [
+    ...keycodes,
+    { sequence: '\x1B\x1C', shortcut: 'ctrl+4', ctrl: true }
+  ],
+  onKeypress: async (input, key, close) => {
     if (![].concat(expected).includes(key.shortcut)) {
       console.log([expected, key.shortcut]);
+      console.log({ input, key });
     }
 
     if (key.shortcut === 'return' || key.shortcut === 'ctrl+c') {

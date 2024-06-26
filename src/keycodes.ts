@@ -2,10 +2,10 @@ export const keycodes = [
   { sequence: '\r', shortcut: 'return' },
   { sequence: '\x03', shortcut: 'ctrl+c', ctrl: true },
 
-  { sequence: '\x1C', shortcut: 'ctrl+4', ctrl: true },
-  { sequence: '\x1D', shortcut: 'ctrl+5', ctrl: true },
-  { sequence: '\x1E', shortcut: 'ctrl+6', ctrl: true },
-  { sequence: '\x1F', shortcut: 'ctrl+7', ctrl: true },
+  { sequence: '\x1B\x1C', shortcut: 'ctrl+4', ctrl: true },
+  { sequence: '\x1B\x1D', shortcut: 'ctrl+5', ctrl: true },
+  { sequence: '\x1B\x1E', shortcut: 'ctrl+6', ctrl: true },
+  { sequence: '\x1B\x1F', shortcut: 'ctrl+7', ctrl: true },
 
   { sequence: '\x1B[1;10A', shortcut: 'shift+meta+up', code: '[1;10A', name: 'up', meta: true, shift: true },
   { sequence: '\x1B[1;10B', shortcut: 'shift+meta+down', code: '[1;10B', name: 'down', meta: true, shift: true },

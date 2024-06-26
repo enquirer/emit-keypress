@@ -59,6 +59,10 @@ export const emitKeypress = ({
 
       let addShortcut = true;
 
+      if (typeof keymap === 'function') {
+        keymap = keymap();
+      }
+
       for (const ele of keymap) {
         if (combinedKey.sequence === ele.sequence) {
           Object.assign(combinedKey, ele);
@@ -81,7 +85,6 @@ export const emitKeypress = ({
       keyBuffer = [];
       return onKeypress(combinedKey.sequence, combinedKey, close);
     }
-
   }
 
   function handleKeypress(input: string, key: readline.Key) {

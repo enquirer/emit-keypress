@@ -27,7 +27,7 @@ export const sequences: Record<string, string> = {
   '\x19': 'ctrl+y',
   '\x1A': 'ctrl+z',
   '\x1B': 'escape', // or 'ctrl+['
-  '\x1C': 'ctrl+\'',
+  '\x1C': 'ctrl+4',
   '\x1D': 'ctrl+5',
   '\x1E': 'ctrl+6',
   '\x1F': 'ctrl+7',

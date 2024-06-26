@@ -9,4 +9,3 @@ process.stdin.on('keypress', (input, key) => {
     process.stdin.pause();
   }
 });
-
