@@ -1,4 +1,5 @@
 export const keycodes = [
+
   { sequence: '\r', shortcut: 'return' },
   { sequence: '\x03', shortcut: 'ctrl+c', ctrl: true },
 
@@ -7,10 +8,10 @@ export const keycodes = [
   { sequence: '\x1B\x1E', shortcut: 'ctrl+6', ctrl: true },
   { sequence: '\x1B\x1F', shortcut: 'ctrl+7', ctrl: true },
 
-  { sequence: '\x1B[1;10A', shortcut: 'shift+meta+up', code: '[1;10A', name: 'up', meta: true, shift: true },
-  { sequence: '\x1B[1;10B', shortcut: 'shift+meta+down', code: '[1;10B', name: 'down', meta: true, shift: true },
-  { sequence: '\x1B[1;10C', shortcut: 'shift+meta+right', code: '[1;10C', name: 'left', meta: true, shift: true },
-  { sequence: '\x1B[1;10D', shortcut: 'shift+meta+left', code: '[1;10D', name: 'right', meta: true, shift: true },
+  { sequence: '\x1B[1;10A', shortcut: 'meta+shift+up', code: '[1;10A', name: 'up', meta: true, shift: true },
+  { sequence: '\x1B[1;10B', shortcut: 'meta+shift+down', code: '[1;10B', name: 'down', meta: true, shift: true },
+  { sequence: '\x1B[1;10C', shortcut: 'meta+shift+right', code: '[1;10C', name: 'left', meta: true, shift: true },
+  { sequence: '\x1B[1;10D', shortcut: 'meta+shift+left', code: '[1;10D', name: 'right', meta: true, shift: true },
 
   { sequence: '\x1B[1;2A', shortcut: 'shift+up', code: '[1;2A', shift: true },
   { sequence: '\x1B[1;2B', shortcut: 'shift+down', code: '[1;2B', shift: true },
@@ -20,11 +21,13 @@ export const keycodes = [
   { sequence: '\x1B[1;2F', shortcut: 'fn+shift+right', code: '[1;2F', fn: true, shift: true },
   { sequence: '\x1B[1;2H', shortcut: 'fn+shift+left', code: '[1;2H', fn: true, shift: true },
 
+  { sequence: '\x1B\x1B[5~', shortcut: 'fn+meta+up', code: '[5~', fn: true, meta: true },
+  { sequence: '\x1B\x1B[6~', shortcut: 'fn+meta+down', code: '[6~', fn: true, meta: true },
   { sequence: '\x1B[1;9F', shortcut: 'fn+meta+right', code: '[1;9F', fn: true, meta: true },
   { sequence: '\x1B[1;9H', shortcut: 'fn+meta+left', code: '[1;9H', fn: true, meta: true },
 
-  { sequence: '\x1B[1;10F', shortcut: 'fn+shift+meta+right', code: '[1;10F', name: 'right', fn: true, meta: true, shift: true },
-  { sequence: '\x1B[1;10H', shortcut: 'fn+shift+meta+left', code: '[1;10H', name: 'left', fn: true, meta: true, shift: true },
+  { sequence: '\x1B[1;10F', shortcut: 'fn+meta+shift+right', code: '[1;10F', name: 'right', fn: true, meta: true, shift: true },
+  { sequence: '\x1B[1;10H', shortcut: 'fn+meta+shift+left', code: '[1;10H', name: 'left', fn: true, meta: true, shift: true },
 
   { sequence: '\x1B[11~', shortcut: 'f1', fn: true },
   { sequence: '\x1B[12~', shortcut: 'f2', fn: true },
@@ -52,8 +55,6 @@ export const keycodes = [
   { sequence: '\x1BOR', shortcut: 'f3', fn: true },
   { sequence: '\x1BOS', shortcut: 'f4', fn: true },
 
-  { sequence: '\x1B\x1B[5~', shortcut: 'fn+meta+up', code: '[5~', meta: true, fn: true },
-  { sequence: '\x1B\x1B[6~', shortcut: 'fn+meta+down', code: '[6~', meta: true, fn: true },
   { sequence: '\x1BOl', shortcut: 'num_key_comma' },
   { sequence: '\x1BOm', shortcut: 'num_key_minus' },
   { sequence: '\x1BOn', shortcut: 'num_key_period' },
