@@ -334,8 +334,13 @@ export function * emitKeys(stream) {
       // tab
       key.name = 'tab';
       key.meta = escaped;
-    } else if (ch === '\b' || ch === '\x7f') {
-      // backspace or ctrl+h
+    } else if (ch === '\b') {
+      // ctrl+backspace or ctrl+h
+      key.name = 'backspace';
+      key.ctrl = true;
+      key.meta = escaped;
+    } else if (ch === '\x7f') {
+      // backspace
       key.name = 'backspace';
       key.meta = escaped;
     } else if (ch === kEscape) {
@@ -351,7 +356,7 @@ export function * emitKeys(stream) {
       key.ctrl = true;
     } else if (/^[0-9A-Za-z]$/.exec(ch) !== null) {
       // Letter, number, shift+letter
-      key.name = ch.toLowerCase();
+      key.name = ch;
       key.shift = /^[A-Z]$/.exec(ch) !== null;
       key.meta = escaped;
     } else if (escaped) {

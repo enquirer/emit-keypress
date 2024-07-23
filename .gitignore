@@ -30,3 +30,5 @@ bower_components
 vendor
 temp
 tmp
+.chat
+dist
