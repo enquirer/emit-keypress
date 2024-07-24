@@ -97,7 +97,6 @@ export const emitKeypress = ({
   }
 
   function handleKeypress(input: string, key: readline.Key) {
-    console.log({ input, key });
     closed = false;
     keyBuffer.push({ input, key });
     clearTimeout(timeout);
