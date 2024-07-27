@@ -1,8 +1,37 @@
 /* eslint-disable no-control-regex */
 import type readline from 'node:readline';
-
 export const PRINTABLE_CHAR_REGEX = /^[\p{L}\p{N}\p{P}\p{S}\p{Z}\p{Sm}/]+$/u;
 export const NON_PRINTABLE_CHAR_REGEX = /[^\P{Cc}\P{Cf}\p{L}\p{N}\p{P}\p{S}\p{Z}]/u;
+
+// Based on isMouse from chjj/blessed
+// Copyright (c) 2013-2015, Christopher Jeffrey and contributors
+export function isMousepress(input, key) {
+  if (key.code === '[M' || key.code === '[I' || key.code === '[O') {
+    return true;
+  }
+
+  return /\x1b\[M/.test(input)
+    || /\x1b\[M([\x00\u0020-\uffff]{3})/.test(input)
+    || /\x1b\[(\d+;\d+;\d+)M/.test(input)
+    || /\x1b\[<(\d+;\d+;\d+)([mM])/.test(input)
+    || /\x1b\[<(\d+;\d+;\d+;\d+)&w/.test(input)
+    || /\x1b\[24([0135])~\[(\d+),(\d+)\]\r/.test(input)
+    || /\x1b\[(O|I)/.test(input);
+}
+
+export const parsePosition = input => {
+  const match = /^\x1B\[([0-9]+);([0-9]+)R/.exec(String(input));
+
+  if (match) {
+    return {
+      name: 'position',
+      pos: { x: match[1] - 1, y: match[2] - 1 },
+      printable: false
+    };
+  }
+
+  return null;
+};
 
 export const createShortcut = (key: readline.Key): string => {
   const modifiers = [];

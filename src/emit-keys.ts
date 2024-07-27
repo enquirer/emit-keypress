@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 // This file is a modified version of the original file from the readline module of Node.js
 // Copyright Joyent, Inc. and other Node contributors.
 // SPDX-License-Identifier: MIT

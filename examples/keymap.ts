@@ -3,13 +3,14 @@ import { emitKeypress } from '../index';
 emitKeypress({
   input: process.stdin,
   keymap: [
-    { sequence: '\x03', shortcut: 'ctrl+c', command: 'cancel' },
-    { sequence: '\r', shortcut: 'return', command: 'submit' }
+    { shortcut: 'escape', action: 'cancel' },
+    { shortcut: 'ctrl+c', action: 'cancel' },
+    { shortcut: 'return', action: 'submit' }
   ],
   onKeypress: async (input, key, close) => {
     console.log({ input, key });
 
-    if (key.shortcut === 'return' || key.shortcut === 'ctrl+c') {
+    if (key.action === 'submit' || key.action === 'cancel') {
       close();
       process.exit(-1);
     }

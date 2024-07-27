@@ -220,7 +220,7 @@ module.exports = {
     '**/node_modules/**',
     'build',
     'dist',
-    'tmp',
+    // 'tmp',
     'temp'
   ]
 };
