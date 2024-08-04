@@ -71,6 +71,7 @@ export function charLengthAt(str, i) {
                 (right_alt * 8)
   - two leading ESCs apparently mean the same as one leading ESC
 */
+
 // eslint-disable-next-line complexity
 export function * emitKeys(stream) {
   while (true) {
@@ -209,6 +210,7 @@ export function * emitKeys(stream) {
 
       if (!key.meta) {
         const parts = [...s];
+
         if (parts[0] === '\u001b' && parts[1] === '\u001b') {
           key.meta = true;
         }
@@ -316,11 +318,23 @@ export function * emitKeys(stream) {
         case '[7^': key.name = 'home'; key.ctrl = true; break;
         case '[8^': key.name = 'end'; key.ctrl = true; break;
 
-        case '[1;10': key.meta = true; break;
+        case '[1;10':
+        case '[5;10':
+        case '[6;10': {
+          if ((ch = yield)) {
+            s += ch;
+            key.name = ch;
+            key.shift = true;
+            key.fn = true;
+          }
+
+          key.meta = true;
+          break;
+        }
 
         /* misc. */
         case '[Z': key.name = 'tab'; key.shift = true; break;
-        default: key.name = 'undefined'; break;
+        default: key.name = undefined; break;
       }
 
     } else if (ch === '\r') {

@@ -338,8 +338,6 @@ export const mousepress = (s: string, buf: Buffer, state = {}) => {
     key.button = b & 3;
   }
 
-  console.log({ s, key });
-
   key.sequence = s;
   return key;
 };

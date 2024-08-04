@@ -1,7 +1,7 @@
 {
   "name": "emit-keypress",
   "description": "Drop-dead simple keypress event emitter for Node.js. Create powerful CLI applications and experiences with ease.",
-  "version": "0.0.11",
+  "version": "0.0.14",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "homepage": "https://github.com/jonschlinkert/emit-keypress",
@@ -22,6 +22,7 @@
     "@types/node": "^20.12.7",
     "@typescript-eslint/eslint-plugin": "^7.13.1",
     "@typescript-eslint/parser": "^7.13.1",
+    "ansi-colors": "^4.1.3",
     "esbuild-register": "^3.5.0",
     "eslint": "^8.57.0",
     "gulp-format-md": "^2.0.0",

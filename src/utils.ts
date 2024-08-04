@@ -20,6 +20,7 @@ export function isMousepress(input, key) {
 }
 
 export const parsePosition = input => {
+  if (!input) return null;
   const match = /^\x1B\[([0-9]+);([0-9]+)R/.exec(String(input));
 
   if (match) {
@@ -38,13 +39,16 @@ export const createShortcut = (key: readline.Key): string => {
   if (key.fn) modifiers.push('fn');
   if (key.ctrl) modifiers.push('ctrl');
   if (key.shift) modifiers.push('shift');
+  if (key.alt) modifiers.push('meta');
+  if (key.option) modifiers.push('meta');
   if (key.meta) modifiers.push('meta');
   let keyName = isPrintableCharacter(key.sequence) ? key.sequence : key.name;
   if (keyName === 'undefined') keyName = '';
-  return modifiers.length > 0 ? `${modifiers.join('+')}+${keyName}` : keyName;
+  const output = modifiers.length > 0 ? `${modifiers.join('+')}+${keyName}` : keyName;
+  return output.length > 1 ? output : '';
 };
 
 // Unicode ranges for general printable characters including emojis
 export const isPrintableCharacter = s => {
-  return PRINTABLE_CHAR_REGEX.test(s) && !NON_PRINTABLE_CHAR_REGEX.test(s);
+  return s && PRINTABLE_CHAR_REGEX.test(s) && !NON_PRINTABLE_CHAR_REGEX.test(s);
 };
