@@ -34,6 +34,38 @@ export const parsePosition = input => {
   return null;
 };
 
+const order = [
+  'sequence',
+  'name',
+  'shortcut',
+  'command',
+  'ctrl',
+  'shift',
+  'meta',
+  'fn',
+  'printable',
+  'pasted',
+  'weight'
+];
+
+export const sortKeys = (obj, keys = order) => {
+  const ordered = {};
+
+  for (const key of keys) {
+    if (obj[key] !== undefined) {
+      ordered[key] = obj[key];
+    }
+  }
+
+  for (const [k, v] of Object.entries(obj)) {
+    if (!(k in ordered)) {
+      ordered[k] = v;
+    }
+  }
+
+  return ordered;
+};
+
 export const createShortcut = (key: readline.Key): string => {
   const modifiers = [];
   if (key.fn) modifiers.push('fn');

@@ -278,7 +278,14 @@ export function * emitKeys(stream) {
         /* xterm/rxvt ESC [ number ~ */
         case '[1~': key.name = 'home'; break;
         case '[2~': key.name = 'insert'; break;
-        case '[3~': key.name = 'delete'; break;
+        case '[3~':
+          key.name = 'delete';
+          console.log([s.slice(1), key, code]);
+
+          key.shift = !s.includes('3;5~');
+          key.fn = /^\[3;[256]~$/.test(s.slice(1));
+          break;
+
         case '[4~': key.name = 'end'; break;
         case '[5~': key.name = 'pageup'; break;
         case '[6~': key.name = 'pagedown'; break;
@@ -318,19 +325,88 @@ export function * emitKeys(stream) {
         case '[7^': key.name = 'home'; key.ctrl = true; break;
         case '[8^': key.name = 'end'; key.ctrl = true; break;
 
-        case '[1;10':
-        case '[5;10':
-        case '[6;10': {
+        case '[3;5~':
+          key.name = 'delete';
+          key.ctrl = true;
+          key.fn = true;
+          break;
+
+        case '[1;13':
+        case '[1;14':
           if ((ch = yield)) {
             s += ch;
-            key.name = ch;
+            key.name = ch === 'H' ? 'left' : 'right';
+            key.ctrl = true;
+            key.shift = code === '[1;14';
+            key.meta = true;
+            key.fn = true;
+          }
+          break;
+
+        case '[3;10':
+          if ((ch = yield)) {
+            s += ch;
+            key.name = 'delete';
+            key.shift = true;
+            key.meta = true;
+            key.fn = true;
+          }
+          break;
+
+        case '[3;13':
+        case '[3;14':
+          if ((ch = yield)) {
+            s += ch;
+            key.name = 'delete';
+            key.ctrl = true;
+            key.shift = code === '[3;14';
+            key.meta = true;
+            key.fn = true;
+          }
+          break;
+
+        case '[5;14':
+        case '[6;14':
+          if ((ch = yield)) {
+            s += ch;
+            key.name = code === '[5;14' ? 'up' : 'down';
+            key.ctrl = true;
+            key.shift = true;
+            key.meta = true;
+            key.fn = true;
+          }
+          break;
+
+        case '[1;10':
+          if ((ch = yield)) {
+            s += ch;
+          }
+
+          switch (ch) {
+            case 'A': key.name = 'up'; break;
+            case 'B': key.name = 'down'; break;
+            case 'C': key.name = 'right'; break;
+            case 'D': key.name = 'left'; break;
+            case 'F': key.name = 'right'; key.fn = true; break;
+            case 'H': key.name = 'left'; key.fn = true; break;
+            default: break;
+          }
+
+          key.shift = true;
+          key.meta = true;
+          break;
+
+        case '[5;10':
+        case '[6;10':
+          if ((ch = yield)) {
+            s += ch;
+            key.name = code === '[5;10' ? 'up' : 'down';
             key.shift = true;
             key.fn = true;
           }
 
           key.meta = true;
           break;
-        }
 
         /* misc. */
         case '[Z': key.name = 'tab'; key.shift = true; break;

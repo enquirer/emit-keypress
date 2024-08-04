@@ -10,15 +10,15 @@ export const keycodes = [
   { sequence: '\x1B[A', shortcut: 'up' },
   { sequence: '\x1B[B', shortcut: 'down' },
 
-  { sequence: '\x1B[1;10A', shortcut: 'meta+shift+up', name: 'rotate_up' },
-  { sequence: '\x1B[1;10B', shortcut: 'meta+shift+down', name: 'rotate_down' },
-  { sequence: '\x1B[1;10C', shortcut: 'meta+shift+right', name: 'rotate_left' },
-  { sequence: '\x1B[1;10D', shortcut: 'meta+shift+left', name: 'rotate_right' },
+  { sequence: '\x1B[1;10A', shortcut: 'meta+shift+up' },
+  { sequence: '\x1B[1;10B', shortcut: 'meta+shift+down' },
+  { sequence: '\x1B[1;10C', shortcut: 'meta+shift+right' },
+  { sequence: '\x1B[1;10D', shortcut: 'meta+shift+left' },
 
-  { sequence: '\x1B[1;2A', shortcut: 'shift+up', name: 'move_up' },
-  { sequence: '\x1B[1;2B', shortcut: 'shift+down', name: 'move_down' },
-  { sequence: '\x1B[1;2C', shortcut: 'shift+right', name: 'move_left' },
-  { sequence: '\x1B[1;2D', shortcut: 'shift+left', name: 'move_right' },
+  { sequence: '\x1B[1;2A', shortcut: 'shift+up' },
+  { sequence: '\x1B[1;2B', shortcut: 'shift+down' },
+  { sequence: '\x1B[1;2C', shortcut: 'shift+right' },
+  { sequence: '\x1B[1;2D', shortcut: 'shift+left' },
 
   { sequence: '\x1B[1;2F', shortcut: 'fn+shift+right' },
   { sequence: '\x1B[1;2H', shortcut: 'fn+shift+left' },
@@ -27,9 +27,6 @@ export const keycodes = [
   { sequence: '\x1B\x1B[6~', shortcut: 'fn+meta+down' },
   { sequence: '\x1B[1;9F', shortcut: 'fn+meta+right' },
   { sequence: '\x1B[1;9H', shortcut: 'fn+meta+left' },
-
-  { sequence: '\x1B[1;10F', shortcut: 'fn+meta+shift+right', name: 'right' },
-  { sequence: '\x1B[1;10H', shortcut: 'fn+meta+shift+left', name: 'left' },
 
   { sequence: '\x1B[11~', shortcut: 'f1' },
   { sequence: '\x1B[12~', shortcut: 'f2' },

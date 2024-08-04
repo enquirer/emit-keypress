@@ -1,6 +1,7 @@
-import { emitKeypress } from '../index';
+import { emitKeypress, keycodes } from '../index';
 
 emitKeypress({
+  keymap: keycodes,
   onKeypress: async (input, key, close) => {
     console.log({ input, key });
 

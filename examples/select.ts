@@ -34,40 +34,39 @@ const render = () => {
   console.log(list.join('\n'));
 };
 
-// render();
-let i = 0;
+render();
+
 emitKeypress({
   keymap,
   bufferTimeout: 50,
   onKeypress: async (input, key, close) => {
-    console.log({ ...key, i: i++ });
-    // switch (key.name) {
-    //   case 'up':
-    //     if (state.index === 0) {
-    //       state.index = choices.length - 1;
-    //     } else {
-    //       state.index--;
-    //     }
-    //     break;
-    //   case 'down':
-    //     if (state.index === choices.length - 1) {
-    //       state.index = 0;
-    //     } else {
-    //       state.index++;
-    //     }
-    //     break;
-    //   default: {
-    //     process.stdout.write(bell);
-    //     break;
-    //   }
-    // }
+    switch (key.name) {
+      case 'up':
+        if (state.index === 0) {
+          state.index = choices.length - 1;
+        } else {
+          state.index--;
+        }
+        break;
+      case 'down':
+        if (state.index === choices.length - 1) {
+          state.index = 0;
+        } else {
+          state.index++;
+        }
+        break;
+      default: {
+        process.stdout.write(bell);
+        break;
+      }
+    }
 
-    // render();
+    render();
 
     if (input === '\x03' || input === '\r') {
       close();
-      // clear();
-      // console.log(choices[state.index]);
+      clear();
+      console.log(choices[state.index]);
     }
   }
 });
