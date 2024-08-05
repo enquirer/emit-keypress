@@ -4,7 +4,6 @@ import { createShortcut, isMousepress, isPrintableCharacter, parsePosition } fro
 import { emitKeypressEvents } from './src/emit-keypress';
 import { mousepress } from './src/mousepress';
 import { keycodes } from './src/keycodes';
-import { sortKeys } from './src/utils';
 export * from './src/utils';
 
 const isWindows = globalThis.process.platform === 'win32';
@@ -36,6 +35,7 @@ export const emitKeypress = ({
   onKeypress,
   onMousepress,
   onExit,
+  bufferTimeout = 20,
   hideCursor = false,
   initialPosition = false
 }: {
@@ -53,9 +53,102 @@ export const emitKeypress = ({
 
   const isRaw = input.isRaw;
   let closed = false;
+  let ms = 0;
 
-  // eslint-disable-next-line complexity
-  function handleKeypress(input: string = '', key: readline.Key) {
+  // Buffering keypress events
+  let keyBuffer: Array<{ input: string; key: readline.Key }> = [];
+  // eslint-disable-next-line no-undef
+  let timeout: NodeJS.Timeout | null = null;
+
+  function emitBufferedKeypress() {
+    ms = 0;
+
+    if (keyBuffer.length > 0) {
+      // Combine buffered keypress events into a single event
+      // eslint-disable-next-line complexity
+      let combinedKey = keyBuffer.reduce((acc, event) => {
+        if (acc.name === 'undefined') {
+          acc.name = '';
+        }
+
+        return {
+          sequence: acc.sequence + event.key.sequence,
+          code: acc.code || event.key.code,
+          name: (acc.name || '') + (event.key.name || '') || (isPrintableCharacter(event.key.sequence) ? event.key.sequence : ''),
+          shortcut: '',
+          ctrl: acc.ctrl || event.key.ctrl,
+          shift: acc.shift || event.key.shift,
+          meta: acc.meta || event.key.meta || false,
+          fn: acc.fn || event.key.fn,
+          printable: acc.printable ?? event.key.printable ?? true
+        };
+      },
+      {
+        sequence: '',
+        code: '',
+        name: '',
+        shortcut: '',
+        ctrl: false,
+        shift: false,
+        meta: false,
+        fn: false,
+        printable: undefined
+      });
+
+      let addShortcut = keyBuffer.length < 3;
+
+      if (typeof keymap === 'function') {
+        keymap = keymap();
+      }
+
+      for (const mapping of keymap) {
+        if (mapping.sequence) {
+          if (combinedKey.sequence === mapping.sequence) {
+            combinedKey = { ...combinedKey, ...mapping };
+            addShortcut = false;
+
+            break;
+          }
+
+          continue;
+        }
+
+        // Only continue comparison if the custom key mapping does not have a sequence
+        if (
+          combinedKey.shortcut === mapping.shortcut ||
+          combinedKey.name === mapping.shortcut
+        ) {
+          combinedKey = { ...combinedKey, ...mapping };
+          addShortcut = false;
+          break;
+        }
+      }
+
+      if (/^f[0-9]+$/.test(combinedKey.name)) {
+        addShortcut = true;
+      }
+
+      if (addShortcut) {
+        combinedKey.shortcut ||= createShortcut(combinedKey);
+      } else {
+        combinedKey.name = '';
+      }
+
+      combinedKey.printable = isPrintableCharacter(combinedKey.sequence);
+      combinedKey.pasted = keyBuffer.length > 2;
+      keyBuffer = [];
+
+      if (isMousepress(combinedKey.sequence, combinedKey)) {
+        const key = mousepress(combinedKey.sequence, Buffer.from(combinedKey.sequence));
+        key.mouse = true;
+        onMousepress?.(key, close);
+      } else {
+        onKeypress(combinedKey.sequence, combinedKey, close);
+      }
+    }
+  }
+
+  function handleKeypress(input: string, key: readline.Key) {
     if (initialPosition) {
       const parsed = parsePosition(key.sequence);
       if (parsed) {
@@ -66,19 +159,25 @@ export const emitKeypress = ({
 
     closed = false;
 
-    if (isMousepress(key.sequence, key)) {
-      const key = mousepress(key.sequence, Buffer.from(key.sequence));
-      key.mouse = true;
-      onMousepress?.(sortKeys(key), close);
-    } else {
-      const binding = keymap.find(k => k.sequence === key.sequence);
+    const total = bufferTimeout + ms;
+    const first = keyBuffer[0];
+    key.printable = isPrintableCharacter(input);
 
-      if (binding) {
-        key = { ...key, ...binding };
-      }
-
-      onKeypress(input, sortKeys(key), close);
+    if (!key.printable && !first) {
+      keyBuffer.push({ input, key });
+      emitBufferedKeypress();
+      return;
     }
+
+    const printable = first && first.key.printable || !first && key.printable;
+
+    if (total < 200 && printable) {
+      ms++;
+    }
+
+    keyBuffer.push({ input, key });
+    clearTimeout(timeout);
+    timeout = setTimeout(emitBufferedKeypress, bufferTimeout + ms);
   }
 
   emitKeypressEvents(input);

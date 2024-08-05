@@ -38,9 +38,9 @@ render();
 
 emitKeypress({
   keymap,
-  bufferTimeout: 50,
+  bufferTimeout: 20,
   onKeypress: async (input, key, close) => {
-    switch (key.name) {
+    switch (key.shortcut) {
       case 'up':
         if (state.index === 0) {
           state.index = choices.length - 1;

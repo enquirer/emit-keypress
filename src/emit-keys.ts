@@ -202,11 +202,17 @@ export function * emitKeys(stream) {
         }
       }
 
+      if (/\[(?:1[5-9]|2[0-2]);10/.test(code)) {
+        s += ch = yield;
+      }
+
       // Parse the key modifier
       key.ctrl = Boolean(modifier & 4);
       key.meta = Boolean(modifier & 10);
       key.shift = Boolean(modifier & 1);
       key.code = code;
+
+      console.log({ code, modifier, key, ch });
 
       if (!key.meta) {
         const parts = [...s];
@@ -257,6 +263,15 @@ export function * emitKeys(stream) {
         case '[23~': key.name = 'f11'; key.fn = true; break;
         case '[24~': key.name = 'f12'; key.fn = true; break;
 
+        /* common */
+        case '[15;10': key.name = 'f5'; key.fn = true; key.shift = true; key.meta = true; break;
+        case '[17;10': key.name = 'f7'; key.fn = true; key.shift = true; key.meta = true; break;
+        case '[18;10': key.name = 'f8'; key.fn = true; key.shift = true; key.meta = true; break;
+        case '[19;10': key.name = 'f9'; key.fn = true; key.shift = true; key.meta = true; break;
+        case '[20;10': key.name = 'f10'; key.fn = true; key.shift = true; key.meta = true; break;
+        case '[21;10': key.name = 'f11'; key.fn = true; key.shift = true; key.meta = true; break;
+        case '[22;10': key.name = 'f12'; key.fn = true; key.shift = true; key.meta = true; break;
+
         /* xterm ESC [ letter */
         case '[A': key.name = 'up'; break;
         case '[B': key.name = 'down'; break;
@@ -280,8 +295,6 @@ export function * emitKeys(stream) {
         case '[2~': key.name = 'insert'; break;
         case '[3~':
           key.name = 'delete';
-          console.log([s.slice(1), key, code]);
-
           key.shift = !s.includes('3;5~');
           key.fn = /^\[3;[256]~$/.test(s.slice(1));
           break;
@@ -387,8 +400,15 @@ export function * emitKeys(stream) {
             case 'B': key.name = 'down'; break;
             case 'C': key.name = 'right'; break;
             case 'D': key.name = 'left'; break;
+
             case 'F': key.name = 'right'; key.fn = true; break;
             case 'H': key.name = 'left'; key.fn = true; break;
+
+            case 'P': key.name = 'f1'; key.fn = true; break;
+            case 'Q': key.name = 'f2'; key.fn = true; break;
+            case 'R': key.name = 'f3'; key.fn = true; break;
+            case 'S': key.name = 'f4'; key.fn = true; break;
+
             default: break;
           }
 

@@ -82,5 +82,5 @@ export const createShortcut = (key: readline.Key): string => {
 
 // Unicode ranges for general printable characters including emojis
 export const isPrintableCharacter = s => {
-  return s && PRINTABLE_CHAR_REGEX.test(s) && !NON_PRINTABLE_CHAR_REGEX.test(s);
+  return s ? PRINTABLE_CHAR_REGEX.test(s) && !NON_PRINTABLE_CHAR_REGEX.test(s) : false;
 };
