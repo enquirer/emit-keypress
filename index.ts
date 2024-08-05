@@ -169,10 +169,10 @@ export const emitKeypress = ({
       return;
     }
 
-    const printable = first && first.key.printable || !first && key.printable;
+    const printable = (first && first.key.printable) || (!first && key.printable);
 
     if (total < 200 && printable) {
-      ms++;
+      ms += 5;
     }
 
     keyBuffer.push({ input, key });

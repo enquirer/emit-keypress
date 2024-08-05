@@ -212,8 +212,6 @@ export function * emitKeys(stream) {
       key.shift = Boolean(modifier & 1);
       key.code = code;
 
-      console.log({ code, modifier, key, ch });
-
       if (!key.meta) {
         const parts = [...s];
 
