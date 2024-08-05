@@ -1,6 +1,6 @@
 import { cyan } from 'ansi-colors';
 import { emitKeypress } from '../index';
-import { keymap } from './keymap copy';
+import { keymap } from './keycodes';
 
 const state = { index: 0 };
 const pointer = cyan('❯');
