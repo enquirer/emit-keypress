@@ -1,7 +1,7 @@
 {
   "name": "emit-keypress",
   "description": "Drop-dead simple keypress event emitter for Node.js. Create powerful CLI applications and experiences with ease.",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "homepage": "https://github.com/enquirer/emit-keypress",
@@ -16,7 +16,8 @@
   "scripts": {
     "eslint": "npx eslint --ext .ts .",
     "test": "ts-mocha -r esbuild-register 'test/**/*.ts'",
-    "tsup": "npx tsup"
+    "tsup": "npx tsup",
+    "prepublishOnly": "npm run tsup"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
@@ -31,6 +32,40 @@
     "tsup": "^8.0.2",
     "typescript": "^5.5.2"
   },
+  "keywords": [
+    "ansi",
+    "bin",
+    "binding",
+    "bindings",
+    "chord",
+    "cli",
+    "command-line",
+    "command",
+    "console",
+    "emit",
+    "emitter",
+    "event",
+    "events",
+    "input",
+    "key",
+    "keybinding",
+    "keycode",
+    "keymap",
+    "keypress",
+    "keys",
+    "listen",
+    "listener",
+    "press",
+    "readline",
+    "sequence",
+    "session",
+    "shortcut",
+    "stdin",
+    "stream",
+    "terminal",
+    "tty",
+    "unicode"
+  ],
   "verb": {
     "toc": false,
     "layout": "default",
