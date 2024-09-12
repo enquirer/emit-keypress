@@ -1,6 +1,10 @@
 import { exec } from 'child_process';
 import { emitKeypress } from '../index';
 
+//
+// Example of pasting text without using "paste" mode
+//
+
 // let start = Date.now();
 const escapeText = (text: string) => text.replace(/([ \n\t\f\r'$%])/g, '\\$1');
 const unescapeText = (text: string) => text.replace(/\\([ \n\t\f\r'$%])/g, '$1');

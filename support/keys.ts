@@ -180,7 +180,7 @@ const keys = [
     ctrl: true,
     meta: false,
     shift: false,
-    sequence: '\u0000'
+    sequence: '\x00'
   },
   {
     name: '^',
@@ -257,7 +257,7 @@ const keys = [
     ctrl: true,
     meta: false,
     shift: false,
-    sequence: '\u0001'
+    sequence: '\x01'
   },
   {
     name: 'a',
@@ -278,7 +278,7 @@ const keys = [
     ctrl: true,
     meta: false,
     shift: false,
-    sequence: '\u0002'
+    sequence: '\x02'
   },
   {
     name: 'b',
@@ -299,21 +299,21 @@ const keys = [
     ctrl: false,
     meta: false,
     shift: false,
-    sequence: ''
+    sequence: '\x7F'
   },
   {
     name: 'backspace',
     ctrl: false,
     meta: false,
     shift: false,
-    sequence: ''
+    sequence: '\x7F'
   },
   {
     name: 'backspace',
     ctrl: false,
     meta: false,
     shift: false,
-    sequence: ''
+    sequence: '\x7F'
   },
   {
     name: 'backspace',
@@ -334,14 +334,7 @@ const keys = [
     ctrl: true,
     meta: false,
     shift: false,
-    sequence: '\u0003'
-  },
-  {
-    name: 'c',
-    ctrl: true,
-    meta: false,
-    shift: false,
-    sequence: '\u0003'
+    sequence: '\x03'
   },
   {
     name: 'c',
@@ -362,7 +355,7 @@ const keys = [
     ctrl: true,
     meta: false,
     shift: false,
-    sequence: '\u0004'
+    sequence: '\x04'
   },
   {
     name: 'd',
@@ -376,7 +369,7 @@ const keys = [
     ctrl: true,
     meta: false,
     shift: false,
-    sequence: '\u000e'
+    sequence: '\x0e'
   },
   {
     name: 'e',
@@ -390,7 +383,7 @@ const keys = [
     ctrl: true,
     meta: false,
     shift: false,
-    sequence: '\u0005'
+    sequence: '\x05'
   },
   {
     name: 'e',
@@ -411,14 +404,7 @@ const keys = [
     ctrl: false,
     meta: false,
     shift: false,
-    sequence: '\u001b'
-  },
-  {
-    name: 'escape',
-    ctrl: false,
-    meta: false,
-    shift: false,
-    sequence: '\u001b'
+    sequence: '\x1B'
   },
   {
     name: 'f',
@@ -432,7 +418,7 @@ const keys = [
     ctrl: true,
     meta: false,
     shift: false,
-    sequence: '\u0006'
+    sequence: '\x06'
   },
   {
     name: 'f',
@@ -453,7 +439,7 @@ const keys = [
     ctrl: true,
     meta: false,
     shift: false,
-    sequence: '\u0007'
+    sequence: '\x07'
   },
   {
     name: 'g',
@@ -523,7 +509,7 @@ const keys = [
     ctrl: true,
     meta: false,
     shift: false,
-    sequence: '\u000b'
+    sequence: '\x0b'
   },
   {
     name: 'l',
@@ -684,7 +670,7 @@ const keys = [
     ctrl: true,
     meta: false,
     shift: false,
-    sequence: '\u000f'
+    sequence: '\x0f'
   },
   {
     name: 'p',
@@ -810,7 +796,7 @@ const keys = [
     ctrl: false,
     meta: false,
     shift: true,
-    sequence: '\u001b[Z',
+    sequence: '\x1B[Z',
     code: '[Z'
   },
   {
@@ -958,7 +944,7 @@ const keys = [
     ctrl: false,
     meta: false,
     shift: true,
-    sequence: '\u001b[1;2A',
+    sequence: '\x1B[1;2A',
     code: '[A'
   },
   {
@@ -966,7 +952,7 @@ const keys = [
     ctrl: false,
     meta: false,
     shift: true,
-    sequence: '\u001b[1;2B',
+    sequence: '\x1B[1;2B',
     code: '[B'
   },
   {
@@ -974,7 +960,7 @@ const keys = [
     ctrl: false,
     meta: false,
     shift: true,
-    sequence: '\u001b[1;2D',
+    sequence: '\x1B[1;2D',
     code: '[D'
   },
   {
@@ -982,7 +968,7 @@ const keys = [
     ctrl: false,
     meta: false,
     shift: true,
-    sequence: '\u001b[1;2C',
+    sequence: '\x1B[1;2C',
     code: '[C'
   }
 ];

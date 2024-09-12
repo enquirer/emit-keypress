@@ -1,7 +1,6 @@
 /* eslint-disable no-await-in-loop */
 import { StringDecoder } from 'node:string_decoder';
 import { emitKeypress, keycodes } from '../index';
-import { sequences } from './sequences';
 
 const pause = (ms = 1000) => new Promise(res => setTimeout(res, ms));
 let expected;
@@ -33,9 +32,9 @@ emitKeypress({
 });
 
 (async () => {
-  for (const [escapeCode, shortcut] of Object.entries(sequences)) {
+  for (const { sequence, shortcut } of keycodes) {
     expected = shortcut;
-    emitKeyCode(escapeCode);
+    emitKeyCode(sequence);
     await pause(10);
   }
 

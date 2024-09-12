@@ -1,3 +1,6 @@
+/* eslint-disable no-extra-parens */
+import os from 'node:os';
+
 /* eslint-disable no-control-regex */
 // This file is a modified version of the original file from the readline module of Node.js
 // Copyright Joyent, Inc. and other Node contributors.
@@ -10,7 +13,9 @@ export function CSI(strings, ...args) {
   let ret = `${kEscape}[`;
   for (let n = 0; n < strings.length; n++) {
     ret += strings[n];
-    if (n < args.length) { ret += args[n]; }
+    if (n < args.length) {
+      ret += args[n];
+    }
   }
   return ret;
 }
@@ -90,10 +95,10 @@ export function * emitKeys(stream) {
 
     if (ch === kEscape) {
       escaped = true;
-      s += ch = yield;
+      s += (ch = yield);
 
       if (ch === kEscape) {
-        s += ch = yield;
+        s += (ch = yield);
       }
     }
 
@@ -105,11 +110,11 @@ export function * emitKeys(stream) {
       if (ch === 'O') {
         // ESC O letter
         // ESC O modifier letter
-        s += ch = yield;
+        s += (ch = yield);
 
         if (ch >= '0' && ch <= '9') {
           modifier = (ch >> 0) - 1;
-          s += ch = yield;
+          s += (ch = yield);
         }
 
         code += ch;
@@ -118,13 +123,13 @@ export function * emitKeys(stream) {
         // ESC [ modifier letter
         // ESC [ [ modifier letter
         // ESC [ [ num char
-        s += ch = yield;
+        s += (ch = yield);
 
         if (ch === '[') {
           // \x1b[[A
           //      ^--- escape codes might have a second bracket
           code += ch;
-          s += ch = yield;
+          s += (ch = yield);
         }
 
         /*
@@ -160,20 +165,20 @@ export function * emitKeys(stream) {
 
         // Skip one or two leading digits
         if (ch >= '0' && ch <= '9') {
-          s += ch = yield;
+          s += (ch = yield);
 
           if (ch >= '0' && ch <= '9') {
-            s += ch = yield;
+            s += (ch = yield);
 
             if (ch >= '0' && ch <= '9') {
-              s += ch = yield;
+              s += (ch = yield);
             }
           }
         }
 
         // skip modifier
         if (ch === ';') {
-          s += ch = yield;
+          s += (ch = yield);
 
           if (ch >= '0' && ch <= '9') {
             s += yield;
@@ -218,6 +223,10 @@ export function * emitKeys(stream) {
         if (parts[0] === '\u001b' && parts[1] === '\u001b') {
           key.meta = true;
         }
+      }
+
+      if (/\x1B\[1;[59][FH]/.test(s)) {
+        key.fn = true;
       }
 
       // Parse the key itself
@@ -344,13 +353,22 @@ export function * emitKeys(stream) {
 
         case '[1;13':
         case '[1;14':
+          key.shift = code === '[1;14';
+          key.ctrl = true;
+          key.meta = true;
+
           if ((ch = yield)) {
             s += ch;
-            key.name = ch === 'H' ? 'left' : 'right';
-            key.ctrl = true;
-            key.shift = code === '[1;14';
-            key.meta = true;
-            key.fn = true;
+
+            switch (ch) {
+              case 'A': key.name = 'up'; break;
+              case 'B': key.name = 'down'; break;
+              case 'C': key.name = 'right'; break;
+              case 'D': key.name = 'left'; break;
+              case 'F': key.name = 'right'; key.fn = true; break;
+              case 'H': key.name = 'left'; key.fn = true; break;
+              default: break;
+            }
           }
           break;
 
@@ -398,15 +416,12 @@ export function * emitKeys(stream) {
             case 'B': key.name = 'down'; break;
             case 'C': key.name = 'right'; break;
             case 'D': key.name = 'left'; break;
-
             case 'F': key.name = 'right'; key.fn = true; break;
             case 'H': key.name = 'left'; key.fn = true; break;
-
             case 'P': key.name = 'f1'; key.fn = true; break;
             case 'Q': key.name = 'f2'; key.fn = true; break;
             case 'R': key.name = 'f3'; key.fn = true; break;
             case 'S': key.name = 'f4'; key.fn = true; break;
-
             default: break;
           }
 

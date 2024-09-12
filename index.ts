@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 import type readline from 'node:readline';
 import { stdin, stdout } from 'node:process';
 import { createShortcut, isMousepress, isPrintableCharacter, parsePosition } from './src/utils';
@@ -6,26 +7,38 @@ import { mousepress } from './src/mousepress';
 import { keycodes } from './src/keycodes';
 export * from './src/utils';
 
+const ESC = '\x1b';
+const ENABLE_PASTE_BRACKET_MODE = `${ESC}[?2004h`;
+const DISABLE_PASTE_BRACKET_MODE = `${ESC}[?2004l`;
+
 const isWindows = globalThis.process.platform === 'win32';
 
+export const enablePaste = (stdout: NodeJS.WriteStream) => {
+  stdout.write(ENABLE_PASTE_BRACKET_MODE);
+};
+
+export const disablePaste = (stdout: NodeJS.WriteStream) => {
+  stdout.write(DISABLE_PASTE_BRACKET_MODE);
+};
+
 export const enableMouse = (stdout: NodeJS.WriteStream) => {
-  stdout.write('\x1b[?1003h');
+  stdout.write(`${ESC}[?1003h`);
 };
 
 export const disableMouse = (stdout: NodeJS.WriteStream) => {
-  stdout.write('\x1b[?1003l');
+  stdout.write(`${ESC}[?1003l`);
 };
 
-export const hideCursor = (stdout: NodeJS.WriteStream) => {
-  stdout.write('\u001b[?25l');
-};
-
-export const showCursor = (stdout: NodeJS.WriteStream) => {
-  stdout.write('\u001b[?25h');
-};
-
-export const cursorPosition = (stdout: NodeJS.WriteStream) => {
-  stdout.write('\x1b[6n');
+export const cursor = {
+  hide: (stdout: NodeJS.WriteStream) => {
+    stdout.write(`${ESC}[?25l`);
+  },
+  show: (stdout: NodeJS.WriteStream) => {
+    stdout.write(`${ESC}[?25h`);
+  },
+  position: (stdout: NodeJS.WriteStream) => {
+    stdout.write(`${ESC}[6n`);
+  }
 };
 
 export const emitKeypress = ({
@@ -35,9 +48,9 @@ export const emitKeypress = ({
   onKeypress,
   onMousepress,
   onExit,
-  bufferTimeout = 20,
   hideCursor = false,
-  initialPosition = false
+  initialPosition = false,
+  enablePasteMode = false
 }: {
   // eslint-disable-next-line no-undef
   input?: NodeJS.ReadStream;
@@ -53,102 +66,11 @@ export const emitKeypress = ({
 
   const isRaw = input.isRaw;
   let closed = false;
-  let ms = 0;
+  let pasting = false;
+  let buffer = '';
 
-  // Buffering keypress events
-  let keyBuffer: Array<{ input: string; key: readline.Key }> = [];
-  // eslint-disable-next-line no-undef
-  let timeout: NodeJS.Timeout | null = null;
-
-  function emitBufferedKeypress() {
-    ms = 0;
-
-    if (keyBuffer.length > 0) {
-      // Combine buffered keypress events into a single event
-      // eslint-disable-next-line complexity
-      let combinedKey = keyBuffer.reduce((acc, event) => {
-        if (acc.name === 'undefined') {
-          acc.name = '';
-        }
-
-        return {
-          sequence: acc.sequence + event.key.sequence,
-          code: acc.code || event.key.code,
-          name: (acc.name || '') + (event.key.name || '') || (isPrintableCharacter(event.key.sequence) ? event.key.sequence : ''),
-          shortcut: '',
-          ctrl: acc.ctrl || event.key.ctrl,
-          shift: acc.shift || event.key.shift,
-          meta: acc.meta || event.key.meta || false,
-          fn: acc.fn || event.key.fn,
-          printable: acc.printable ?? event.key.printable ?? true
-        };
-      },
-      {
-        sequence: '',
-        code: '',
-        name: '',
-        shortcut: '',
-        ctrl: false,
-        shift: false,
-        meta: false,
-        fn: false,
-        printable: undefined
-      });
-
-      let addShortcut = keyBuffer.length < 3;
-
-      if (typeof keymap === 'function') {
-        keymap = keymap();
-      }
-
-      for (const mapping of keymap) {
-        if (mapping.sequence) {
-          if (combinedKey.sequence === mapping.sequence) {
-            combinedKey = { ...combinedKey, ...mapping };
-            addShortcut = false;
-
-            break;
-          }
-
-          continue;
-        }
-
-        // Only continue comparison if the custom key mapping does not have a sequence
-        if (
-          combinedKey.shortcut === mapping.shortcut ||
-          combinedKey.name === mapping.shortcut
-        ) {
-          combinedKey = { ...combinedKey, ...mapping };
-          addShortcut = false;
-          break;
-        }
-      }
-
-      if (/^f[0-9]+$/.test(combinedKey.name)) {
-        addShortcut = true;
-      }
-
-      if (addShortcut) {
-        combinedKey.shortcut ||= createShortcut(combinedKey);
-      } else {
-        combinedKey.name = '';
-      }
-
-      combinedKey.printable = isPrintableCharacter(combinedKey.sequence);
-      combinedKey.pasted = keyBuffer.length > 2;
-      keyBuffer = [];
-
-      if (isMousepress(combinedKey.sequence, combinedKey)) {
-        const key = mousepress(combinedKey.sequence, Buffer.from(combinedKey.sequence));
-        key.mouse = true;
-        onMousepress?.(key, close);
-      } else {
-        onKeypress(combinedKey.sequence, combinedKey, close);
-      }
-    }
-  }
-
-  function handleKeypress(input: string, key: readline.Key) {
+  // eslint-disable-next-line complexity
+  async function handleKeypress(input: string, key: readline.Key) {
     if (initialPosition) {
       const parsed = parsePosition(key.sequence);
       if (parsed) {
@@ -157,27 +79,73 @@ export const emitKeypress = ({
       }
     }
 
-    closed = false;
-
-    const total = bufferTimeout + ms;
-    const first = keyBuffer[0];
-    key.printable = isPrintableCharacter(input);
-
-    if (!key.printable && !first) {
-      keyBuffer.push({ input, key });
-      emitBufferedKeypress();
+    if (key.name === 'paste-start' || /\x1B\[200~/.test(key.sequence)) {
+      pasting = true;
+      buffer = '';
       return;
     }
 
-    const printable = (first && first.key.printable) || (!first && key.printable);
-
-    if (total < 200 && printable) {
-      ms += 5;
+    if (key.name === 'paste-end' || /\x1B\[201~/.test(key.sequence)) {
+      key.name = 'paste';
+      key.sequence = buffer.replace(/\x1B\[201~/g, '');
+      key.ctrl = false;
+      key.shift = false;
+      key.meta = false;
+      key.fn = false;
+      key.printable = true;
+      onKeypress(buffer, key, close);
+      pasting = false;
+      buffer = '';
+      return;
     }
 
-    keyBuffer.push({ input, key });
-    clearTimeout(timeout);
-    timeout = setTimeout(emitBufferedKeypress, bufferTimeout + ms);
+    if (pasting) {
+      buffer += key.sequence?.replace(/\r/g, '\n') || '';
+      return;
+    }
+
+    if (!buffer && isMousepress(key.sequence, key)) {
+      const k = mousepress(key.sequence, Buffer.from(key.sequence));
+      k.mouse = true;
+      onMousepress?.(k, close);
+    } else {
+
+      let addShortcut = false;
+
+      if (typeof keymap === 'function') {
+        keymap = keymap();
+      }
+
+      for (const mapping of keymap) {
+        if (mapping.sequence) {
+          if (key.sequence === mapping.sequence) {
+            key = { ...key, ...mapping };
+            addShortcut = false;
+            break;
+          }
+
+          continue;
+        }
+
+        // Only continue comparison if the custom key mapping does not have a sequence
+        if ((key.shortcut && key.shortcut === mapping.shortcut) || (key.name && key.name === mapping.shortcut)) {
+          key = { ...key, ...mapping };
+          addShortcut = false;
+          break;
+        }
+      }
+
+      if (/^f[0-9]+$/.test(key.name)) {
+        addShortcut = true;
+      }
+
+      if (addShortcut) {
+        key.shortcut ||= createShortcut(key);
+      }
+
+      key.printable ||= isPrintableCharacter(key.sequence);
+      onKeypress(key.sequence, key, close);
+    }
   }
 
   emitKeypressEvents(input);
@@ -186,12 +154,16 @@ export const emitKeypress = ({
     enableMouse(output);
   }
 
+  if (enablePasteMode === true) {
+    enablePaste(output);
+  }
+
   function close() {
     if (closed) return;
     if (!isWindows && input.isTTY) input.setRawMode(isRaw);
     if (onKeypress) input.off('keypress', handleKeypress);
     if (onMousepress) disableMouse(output);
-    if (hideCursor) showCursor(output);
+    if (hideCursor) cursor.show(output);
     closed = true;
     input.pause();
     onExit?.();
@@ -199,7 +171,7 @@ export const emitKeypress = ({
 
   // Disable automatic character echoing
   if (!isWindows && input.isTTY) input.setRawMode(true);
-  if (hideCursor) hideCursor(output);
+  if (hideCursor) cursor.hide(output);
   if (onKeypress) input.on('keypress', handleKeypress);
 
   input.setEncoding('utf8');
@@ -207,7 +179,7 @@ export const emitKeypress = ({
   input.resume();
 
   if (initialPosition) {
-    cursorPosition(output);
+    cursor.position(output);
   }
 
   return close;

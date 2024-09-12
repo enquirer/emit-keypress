@@ -173,11 +173,10 @@ export const mousepress = (s: string, buf: Buffer, state = {}) => {
     } else {
       key.action = 'mousedown';
       button = b & 3;
-      key.button =
-          button === 0 ? 'left'
-            : button === 1 ? 'middle'
-              : button === 2 ? 'right'
-                : 'unknown';
+      key.button = button === 0 ? 'left'
+        : button === 1 ? 'middle'
+          : button === 2 ? 'right'
+            : 'unknown';
 
       // NOTE: 0/32 = mousemove, 32/64 = mousemove with left down
       // if ((b >> 1) === 32)
@@ -235,7 +234,10 @@ export const mousepress = (s: string, buf: Buffer, state = {}) => {
     } else {
       key.action = down ? 'mousedown' : 'mouseup';
       button = b & 3;
-      key.button = button === 0 ? 'left' : button === 1 ? 'middle' : button === 2 ? 'right' : 'unknown';
+      key.button = button === 0
+        ? 'left' : button === 1
+          ? 'middle' : button === 2
+            ? 'right' : 'unknown';
     }
 
     // Probably a movement.
@@ -247,7 +249,8 @@ export const mousepress = (s: string, buf: Buffer, state = {}) => {
     // xterm: 35, _, 51, _
     // gnome: 32, 36, 48, 40
     // if (key.action === 'mousedown' && key.button === 'unknown') {
-    if (b === 35 || b === 39 || b === 51 || b === 43 || (state.isVTE && (b === 32 || b === 36 || b === 48 || b === 40))) {
+    if (b === 35 || b === 39 || b === 51 || b === 43
+      || (state.isVTE && (b === 32 || b === 36 || b === 48 || b === 40))) {
       delete key.button;
       key.action = 'mousemove';
     }
@@ -281,7 +284,10 @@ export const mousepress = (s: string, buf: Buffer, state = {}) => {
     }
 
     key.action = b === 3 ? 'mouseup' : 'mousedown';
-    key.button = b === 2 ? 'left' : b === 4 ? 'middle' : b === 6 ? 'right' : 'unknown';
+    key.button = b === 2
+      ? 'left' : b === 4
+        ? 'middle' : b === 6
+          ? 'right' : 'unknown';
 
     key.sequence = s;
     return key;
