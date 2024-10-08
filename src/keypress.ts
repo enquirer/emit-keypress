@@ -1,7 +1,4 @@
-/* eslint-disable no-extra-parens */
-import os from 'node:os';
-
-/* eslint-disable no-control-regex */
+/* eslint-disable no-extra-parens, no-control-regex */
 // This file is a modified version of the original file from the readline module of Node.js
 // Copyright Joyent, Inc. and other Node contributors.
 // SPDX-License-Identifier: MIT
@@ -231,6 +228,14 @@ export function * emitKeys(stream) {
 
       // Parse the key itself
       switch (code) {
+        case '[M': {
+          key.name = 'mouse';
+          s += (ch = yield); // button-byte
+          s += (ch = yield); // x-coordinate
+          s += (ch = yield); // y-coordinate
+          break;
+        }
+
         /* xterm/gnome ESC [ letter (with modifier) */
         case '[P': key.name = 'f1'; key.fn = true; break;
         case '[Q': key.name = 'f2'; key.fn = true; break;

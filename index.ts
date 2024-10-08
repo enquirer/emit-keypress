@@ -130,7 +130,10 @@ export const emitKeypress = ({
         }
 
         // Only continue comparison if the custom key mapping does not have a sequence
-        if ((key.shortcut && key.shortcut === mapping.shortcut) || (key.name && key.name === mapping.shortcut)) {
+        if (
+          (key.shortcut && key.shortcut === mapping.shortcut) ||
+          (key.name && key.name === mapping.shortcut)
+        ) {
           key = { ...key, ...mapping };
           addShortcut = false;
           break;
@@ -194,11 +197,11 @@ export const emitKeypress = ({
 };
 
 export {
-  keycodes,
   createShortcut,
   emitKeypressEvents,
   isMousepress,
   isPrintableCharacter,
+  keycodes,
   mousepress
 };
 

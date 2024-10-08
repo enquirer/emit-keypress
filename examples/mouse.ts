@@ -3,7 +3,7 @@ import { emitKeypress } from '../index';
 emitKeypress({
   enableMouseEvents: true,
   onKeypress: (input, key, close) => {
-    console.log('keypress:', { input, key });
+    // console.log('keypress:', { input, key });
 
     if (input === '\x03' || input === '\r') {
       console.log('cleared');
