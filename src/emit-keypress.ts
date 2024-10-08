@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 import { StringDecoder } from 'node:string_decoder';
 import { clearTimeout, setTimeout } from 'node:timers';
-import { charLengthAt, CSI, emitKeys } from './emit-keys';
+import { charLengthAt, CSI, emitKeys } from '~/keypress';
 
 const { kEscape } = CSI;
 const KEYPRESS_DECODER = Symbol('keypress-decoder');

@@ -1,11 +1,11 @@
 /* eslint-disable no-control-regex */
 import type readline from 'node:readline';
 import { stdin, stdout } from 'node:process';
-import { createShortcut, isMousepress, isPrintableCharacter, parsePosition } from './src/utils';
-import { emitKeypressEvents } from './src/emit-keypress';
-import { mousepress } from './src/mousepress';
-import { keycodes } from './src/keycodes';
-export * from './src/utils';
+import { createShortcut, isMousepress, isPrintableCharacter, parsePosition } from '~/utils';
+import { emitKeypressEvents } from '~/emit-keypress';
+import { mousepress } from '~/mousepress';
+import { keycodes } from '~/keycodes';
+export * from '~/utils';
 
 const ESC = '\x1b';
 const ENABLE_PASTE_BRACKET_MODE = `${ESC}[?2004h`;
@@ -48,6 +48,7 @@ export const emitKeypress = ({
   onKeypress,
   onMousepress,
   onExit,
+  handleClose = true,
   hideCursor = false,
   initialPosition = false,
   enablePasteMode = false
@@ -67,13 +68,15 @@ export const emitKeypress = ({
   const isRaw = input.isRaw;
   let closed = false;
   let pasting = false;
+  let initial = true;
   let buffer = '';
 
   // eslint-disable-next-line complexity
   async function handleKeypress(input: string, key: readline.Key) {
-    if (initialPosition) {
+    if (initialPosition && initial) {
       const parsed = parsePosition(key.sequence);
       if (parsed) {
+        initial = false;
         onKeypress('', parsed, close);
         return;
       }
@@ -109,7 +112,6 @@ export const emitKeypress = ({
       k.mouse = true;
       onMousepress?.(k, close);
     } else {
-
       let addShortcut = false;
 
       if (typeof keymap === 'function') {
@@ -180,6 +182,12 @@ export const emitKeypress = ({
 
   if (initialPosition) {
     cursor.position(output);
+  }
+
+  if (handleClose !== false) {
+    process.on('uncaughtException', close);
+    process.on('SIGINT', close);
+    process.on('exit', close);
   }
 
   return close;

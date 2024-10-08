@@ -1,5 +1,3 @@
-import { keymap } from '../examples/keycodes';
-
 export const keycodes = [
   { sequence: '\r', shortcut: 'return' },
   { sequence: '\x7F', shortcut: 'backspace' },
