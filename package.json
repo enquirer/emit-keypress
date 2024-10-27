@@ -1,7 +1,7 @@
 {
   "name": "emit-keypress",
   "description": "Drop-dead simple keypress event emitter for Node.js. Create powerful CLI applications and experiences with ease.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "homepage": "https://github.com/enquirer/emit-keypress",
