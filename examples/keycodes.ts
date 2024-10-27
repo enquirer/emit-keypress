@@ -120,21 +120,6 @@ export const keymap = [
   // { shortcut: 'shift+pageup', command: 'select_pageup', sequence: '\x1B[5;2~', weight: 0 },
   // { shortcut: 'shift+pagedown', command: 'select_pagedown', sequence: '\x1B[6;2~', weight: 0 },
 
-  // { shortcut: 'shift+home', command: 'select_home', sequence: '\x1B[1;2H', weight: 0 },
-  // { shortcut: 'shift+end', command: 'select_end', sequence: '\x1B[1;2F', weight: 0 },
-
-  // { shortcut: 'shift+home', command: 'select_home', sequence: '\x1B[1;2H', weight: 0 },
-  // { shortcut: 'shift+end', command: 'select_end', sequence: '\x1B[1;2F', weight: 0 },
-
-  // { shortcut: 'shift+home', command: 'select_home', sequence: '\x1B[1;2H', weight: 0 },
-  // { shortcut: 'shift+end', command: 'select_end', sequence: '\x1B[1;2F', weight: 0 },
-
-  // { shortcut: 'shift+home', command: 'select_home', sequence: '\x1B[1;2H', weight: 0 },
-  // { shortcut: 'shift+end', command: 'select_end', sequence: '\x1B[1;2F', weight: 0 },
-
-  // { shortcut: 'shift+home', command: 'select_home', sequence: '\x1B[1;2H', weight: 0 },
-  // { shortcut: 'shift+end', command: 'select_end', sequence: '\x1B[1;2F', weight: 0 },
-
   /* <ctrl>+<shift> */
   { shortcut: 'ctrl+shift+right', command: 'select_word_right', sequence: '\x1B[1;6C', weight: 0 },
   { shortcut: 'ctrl+shift+left', command: 'select_word_left', sequence: '\x1B[1;6D', weight: 0 },

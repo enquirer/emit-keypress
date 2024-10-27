@@ -20,8 +20,7 @@ emitKeypress({
   ],
   onKeypress: async (input, key, close) => {
     if (![].concat(expected).includes(key.shortcut)) {
-      console.log([expected, key.shortcut]);
-      console.log({ input, key });
+      console.log({ expected, input, key });
     }
 
     if (key.shortcut === 'return' || key.shortcut === 'ctrl+c') {
@@ -33,11 +32,13 @@ emitKeypress({
 
 (async () => {
   for (const { sequence, shortcut } of keycodes) {
+    if (shortcut === 'return') continue;
     expected = shortcut;
     emitKeyCode(sequence);
     await pause(10);
   }
 
+  emitKeyCode('\r');
   console.log('finished');
   expected = 'return';
 })();

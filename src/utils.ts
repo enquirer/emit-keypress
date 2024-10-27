@@ -3,6 +3,9 @@ import type readline from 'node:readline';
 export const PRINTABLE_CHAR_REGEX = /^[\p{L}\p{N}\p{P}\p{S}\p{Z}\p{Sm}/]+$/u;
 export const NON_PRINTABLE_CHAR_REGEX = /[^\P{Cc}\P{Cf}\p{L}\p{N}\p{P}\p{S}\p{Z}]/u;
 
+export const metaKeys = new Set(['alt', 'meta', 'option']);
+export const modifierKeys = ['fn', 'ctrl', 'shift', ...[...metaKeys], 'cmd'];
+
 // Based on isMouse from chjj/blessed
 // Copyright (c) 2013-2015, Christopher Jeffrey and contributors
 export function isMousepress(input, key) {
@@ -26,7 +29,7 @@ export const parsePosition = input => {
   if (match) {
     return {
       name: 'position',
-      pos: { x: match[1] - 1, y: match[2] - 1 },
+      position: { x: match[1], y: match[2] },
       printable: false
     };
   }
@@ -66,18 +69,69 @@ export const sortKeys = (obj, keys = order) => {
   return ordered;
 };
 
-export const createShortcut = (key: readline.Key): string => {
+export const sortModifiers = (names: string[]): string[] => {
   const modifiers = [];
-  if (key.fn) modifiers.push('fn');
-  if (key.ctrl) modifiers.push('ctrl');
-  if (key.shift) modifiers.push('shift');
-  if (key.alt) modifiers.push('meta');
-  if (key.option) modifiers.push('meta');
-  if (key.meta) modifiers.push('meta');
+  const after = [];
+
+  for (const name of modifierKeys) {
+    if (names.includes(name)) {
+      modifiers.push(name);
+    }
+  }
+
+  for (const name of names) {
+    if (!modifiers.includes(name)) {
+      after.push(name);
+    }
+  }
+
+  return modifiers.concat(after);
+};
+
+export const createShortcut = (key: readline.Key): string => {
+  const modifiers = new Set();
+  if (key.fn) modifiers.add('fn');
+  if (key.ctrl) modifiers.add('ctrl');
+  if (key.shift) modifiers.add('shift');
+  if (key.alt) modifiers.add('meta');
+  if (key.option) modifiers.add('meta');
+  if (key.meta) modifiers.add('meta');
+
   let keyName = isPrintableCharacter(key.sequence) ? key.sequence : key.name;
   if (keyName === 'undefined') keyName = '';
-  const output = modifiers.length > 0 ? `${modifiers.join('+')}+${keyName}` : keyName;
+
+  const output = modifiers.size > 0 && keyName
+    ? `${sortModifiers([...modifiers]).join('+')}+${keyName}`
+    : keyName;
+
   return output.length > 1 ? output : '';
+};
+
+export const sortShortcutModifier = shortcut => {
+  return sortModifiers(shortcut.split('+')).join('+');
+};
+
+export const sortShortcutModifiers = (keymap = []) => {
+  for (const key of keymap) key.shortcut = sortShortcutModifier(key.shortcut);
+  return keymap;
+};
+
+export const prioritizeKeymap = (keymap: any = []) => {
+  const omit = keymap
+    .filter(k => k.shortcut?.startsWith('-'))
+    .map(k => sortShortcutModifier(k.shortcut.slice(1)));
+
+  const bindings = sortShortcutModifiers(keymap)
+    .filter(k => !omit.includes(k.shortcut));
+
+  bindings.sort((a, b) => {
+    a.weight ||= 0;
+    b.weight ||= 0;
+    if (a.weight === b.weight) return 0;
+    return a.weight > b.weight ? 1 : -1;
+  });
+
+  return bindings;
 };
 
 // Unicode ranges for general printable characters including emojis

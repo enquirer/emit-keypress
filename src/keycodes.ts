@@ -3,6 +3,7 @@ export const keycodes = [
   { sequence: '\x7F', shortcut: 'backspace' },
   { sequence: '\x1B', shortcut: 'escape' },
   { sequence: '\x1B[1~', shortcut: 'home' },
+  { sequence: '\x1B\x1B[1~', shortcut: 'home' },
   { sequence: '\x1B[2~', shortcut: 'insert' },
   { sequence: '\x1B[3~', shortcut: 'delete' },
   { sequence: '\x1B[4~', shortcut: 'end' },
@@ -47,7 +48,7 @@ export const keycodes = [
   // <ctrl>
   { sequence: '\x00', shortcut: 'ctrl+`' },
   { sequence: '\x0c', shortcut: 'ctrl+4' },
-  { sequence: '\x0d', shortcut: 'ctrl+5' },
+  // { sequence: '\x0d', shortcut: 'ctrl+5' },
   { sequence: '\x0e', shortcut: 'ctrl+6' },
   { sequence: '\x0f', shortcut: 'ctrl+7' },
   { sequence: '\x01', shortcut: 'ctrl+a' },

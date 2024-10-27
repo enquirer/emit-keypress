@@ -1,10 +1,18 @@
 /* eslint-disable no-control-regex */
 import type readline from 'node:readline';
 import { stdin, stdout } from 'node:process';
-import { createShortcut, isMousepress, isPrintableCharacter, parsePosition } from '~/utils';
 import { emitKeypressEvents } from '~/emit-keypress';
 import { mousepress } from '~/mousepress';
 import { keycodes } from '~/keycodes';
+import {
+  createShortcut,
+  isMousepress,
+  isPrintableCharacter,
+  parsePosition,
+  prioritizeKeymap,
+  sortShortcutModifier
+} from '~/utils';
+
 export * from '~/utils';
 
 const ESC = '\x1b';
@@ -66,9 +74,11 @@ export const emitKeypress = ({
   }
 
   const isRaw = input.isRaw;
+  const sortedShorcuts = new Set();
   let closed = false;
   let pasting = false;
   let initial = true;
+  let sorted = false;
   let buffer = '';
 
   // eslint-disable-next-line complexity
@@ -118,6 +128,13 @@ export const emitKeypress = ({
         keymap = keymap();
       }
 
+      if (!sorted) {
+        keymap = prioritizeKeymap(keymap);
+        sorted = true;
+      }
+
+      const shortcut = key.shortcut ? sortShortcutModifier(key.shortcut) : createShortcut(key);
+
       for (const mapping of keymap) {
         if (mapping.sequence) {
           if (key.sequence === mapping.sequence) {
@@ -129,11 +146,13 @@ export const emitKeypress = ({
           continue;
         }
 
+        if (mapping.shortcut && !sortedShorcuts.has(mapping.shortcut)) {
+          sortedShorcuts.add(mapping.shortcut);
+          mapping.shortcut = sortShortcutModifier(mapping.shortcut);
+        }
+
         // Only continue comparison if the custom key mapping does not have a sequence
-        if (
-          (key.shortcut && key.shortcut === mapping.shortcut) ||
-          (key.name && key.name === mapping.shortcut)
-        ) {
+        if ((shortcut === mapping.shortcut) || (key.name && key.name === mapping.shortcut)) {
           key = { ...key, ...mapping };
           addShortcut = false;
           break;
@@ -145,7 +164,7 @@ export const emitKeypress = ({
       }
 
       if (addShortcut) {
-        key.shortcut ||= createShortcut(key);
+        key.shortcut ||= shortcut;
       }
 
       key.printable ||= isPrintableCharacter(key.sequence);
