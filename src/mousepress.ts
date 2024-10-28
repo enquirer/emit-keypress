@@ -54,9 +54,13 @@ export const mousepress = (s: string, buf: Buffer, state = {}) => {
     x = buf[4];
     y = buf[5];
 
-    // unsigned char overflow.
+    // Handle coordinate, unsigned char overflow
     if (x < 0x20) x += 0xff;
     if (y < 0x20) y += 0xff;
+
+    // Handle large terminal windows (coordinates > 255)
+    if (x === 0xff) x = 255;
+    if (y === 0xff) y = 255;
 
     // Convert the coordinates into a
     // properly formatted x10 utf8 sequence.
