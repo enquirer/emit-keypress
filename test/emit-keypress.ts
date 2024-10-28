@@ -188,4 +188,164 @@ describe('emitKeypress', () => {
       }, 10);
     }, 10);
   });
+
+  it('should handle multiple rapid escape sequences correctly', cb => {
+    const escapeSequences = [
+      { sequence: '\x1B[A', shortcut: 'up' },
+      { sequence: '\x1B[B', shortcut: 'down' },
+      { sequence: '\x1B[C', shortcut: 'right' }
+    ];
+    let completed = 0;
+
+    emitKeypress({
+      input: mockInput,
+      output: mockOutput,
+      onKeypress: (input, k, close) => {
+        const expected = escapeSequences[completed];
+        assert.equal(input, expected.sequence);
+        assert.equal(k.shortcut, expected.shortcut);
+        completed++;
+
+        if (completed === escapeSequences.length) {
+          close();
+          cb();
+        }
+      }
+    });
+
+    emitKeypressEvents(mockInput);
+
+    // Emit sequences rapidly with only 1ms delay
+    escapeSequences.forEach((seq, i) => {
+      setTimeout(() => {
+        mockInput.emit('keypress', seq.sequence, { sequence: seq.sequence, shortcut: seq.shortcut });
+      }, Number(i));
+    });
+  });
+
+  it('should cleanup paste state if paste-end is never received', cb => {
+    const pasteStartSequence = '\x1b[200~';
+    const pasteContent = 'incomplete paste';
+    let keypressAfterTimeout = false;
+
+    emitKeypress({
+      input: mockInput,
+      output: mockOutput,
+      enablePasteMode: true,
+      onKeypress: (input, k, close) => {
+        if (keypressAfterTimeout) {
+          // Should receive normal keypress after timeout
+          assert.equal(input, 'x');
+          assert.equal(k.sequence, 'x');
+          close();
+          cb();
+        }
+      }
+    });
+
+    emitKeypressEvents(mockInput);
+
+    mockInput.emit('keypress', pasteStartSequence, {
+      name: 'paste-start',
+      sequence: pasteStartSequence
+    });
+
+    pasteContent.split('').forEach(char => {
+      mockInput.emit('keypress', char, { sequence: char });
+    });
+
+    // Wait for paste timeout (10 seconds in the implementation)
+    setTimeout(() => {
+      keypressAfterTimeout = true;
+      // Should be handled as normal keypress after timeout
+      mockInput.emit('keypress', 'x', { sequence: 'x' });
+    }, 110);
+  }).timeout(11000);
+
+  it('should handle paste buffer overflow', cb => {
+    const pasteStartSequence = '\x1b[200~';
+    const pasteEndSequence = '\x1b[201~';
+    const pasteContent = 'x'.repeat(2 * 1024 * 1024); // 2MB of data (over the 1MB limit)
+    let received = false;
+
+    emitKeypress({
+      input: mockInput,
+      output: mockOutput,
+      enablePasteMode: true,
+      pasteModeTimeout: 100,
+      onKeypress: (input, k, close) => {
+        if (k.name === 'paste') {
+          assert.ok(input.length <= 1024 * 1024, 'Paste buffer should be limited to 1MB');
+          received = true;
+          close();
+          cb();
+        }
+      }
+    });
+
+    emitKeypressEvents(mockInput);
+
+    mockInput.emit('keypress', pasteStartSequence, {
+      name: 'paste-start',
+      sequence: pasteStartSequence
+    });
+
+    pasteContent.split('').forEach(char => {
+      mockInput.emit('keypress', char, { sequence: char });
+    });
+
+    mockInput.emit('keypress', pasteEndSequence, {
+      name: 'paste-end',
+      sequence: pasteEndSequence
+    });
+
+    setTimeout(() => {
+      assert.ok(received, 'Should have received paste event');
+    }, 150);
+  });
+
+  it('should properly clean up all event listeners on close', cb => {
+    const initialListeners = process.listenerCount('SIGINT');
+
+    const close = emitKeypress({
+      input: mockInput,
+      output: mockOutput,
+      onKeypress: () => {},
+      handleClose: true
+    });
+
+    assert.ok(process.listenerCount('SIGINT') > initialListeners);
+    close();
+
+    setTimeout(() => {
+      assert.equal(process.listenerCount('SIGINT'), initialListeners);
+      assert.equal(mockInput.listenerCount('keypress'), 0);
+      assert.equal(mockInput.listenerCount('pause'), 0);
+      cb();
+    }, 10);
+  });
+
+  it('should handle combining characters correctly', cb => {
+    const combiningChar = 'e\u0301'; // é (e + combining acute accent)
+    let received = false;
+
+    emitKeypress({
+      input: mockInput,
+      output: mockOutput,
+      onKeypress: (input, k, close) => {
+        assert.equal(input, combiningChar);
+        assert.ok(k.printable);
+        received = true;
+        close();
+        cb();
+      }
+    });
+
+    emitKeypressEvents(mockInput);
+    mockInput.emit('keypress', combiningChar, { sequence: combiningChar });
+
+    setTimeout(() => {
+      assert.ok(received, 'Should have received combining character event');
+    }, 100);
+  });
 });
