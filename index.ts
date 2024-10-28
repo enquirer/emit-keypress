@@ -20,6 +20,7 @@ const ENABLE_PASTE_BRACKET_MODE = `${ESC}[?2004h`;
 const DISABLE_PASTE_BRACKET_MODE = `${ESC}[?2004l`;
 
 const isWindows = globalThis.process.platform === 'win32';
+const MAX_PASTE_BUFFER = 1024 * 1024; // 1MB limit for paste buffer
 
 export const enablePaste = (stdout: NodeJS.WriteStream) => {
   stdout.write(ENABLE_PASTE_BRACKET_MODE);
@@ -49,6 +50,14 @@ export const cursor = {
   }
 };
 
+const hasMatchingModifiers = (a: readline.Key, b) => {
+  return a.ctrl === b.ctrl && a.shift === b.shift && a.meta === b.meta && a.fn === b.fn;
+};
+
+const hasModifier = (key: readline.Key) => {
+  return key.ctrl || key.shift || key.meta || key.fn;
+};
+
 export const emitKeypress = ({
   input = stdin,
   output = stdout,
@@ -59,7 +68,8 @@ export const emitKeypress = ({
   handleClose = true,
   hideCursor = false,
   initialPosition = false,
-  enablePasteMode = false
+  enablePasteMode = false,
+  pasteModeTimeout = 100
 }: {
   // eslint-disable-next-line no-undef
   input?: NodeJS.ReadStream;
@@ -68,6 +78,7 @@ export const emitKeypress = ({
   onKeypress: (input: string, key: readline.Key, close: () => void) => void;
   // eslint-disable-next-line no-unused-vars
   onMousepress?: (input: string, key: any, close: () => void) => void;
+  onExit?: () => void;
 }) => {
   if (!input || (input !== process.stdin && !input.isTTY)) {
     throw new Error('Invalid stream passed');
@@ -80,6 +91,16 @@ export const emitKeypress = ({
   let initial = true;
   let sorted = false;
   let buffer = '';
+  let pasteTimeout: NodeJS.Timeout | null = null;
+
+  const clearPasteState = () => {
+    pasting = false;
+    buffer = '';
+    if (pasteTimeout) {
+      clearTimeout(pasteTimeout);
+      pasteTimeout = null;
+    }
+  };
 
   // eslint-disable-next-line complexity
   async function handleKeypress(input: string, key: readline.Key) {
@@ -93,27 +114,36 @@ export const emitKeypress = ({
     }
 
     if (key.name === 'paste-start' || /\x1B\[200~/.test(key.sequence)) {
+      clearPasteState();
       pasting = true;
-      buffer = '';
+      pasteTimeout = setTimeout(clearPasteState, pasteModeTimeout);
       return;
     }
 
     if (key.name === 'paste-end' || /\x1B\[201~/.test(key.sequence)) {
-      key.name = 'paste';
-      key.sequence = buffer.replace(/\x1B\[201~/g, '');
-      key.ctrl = false;
-      key.shift = false;
-      key.meta = false;
-      key.fn = false;
-      key.printable = true;
-      onKeypress(buffer, key, close);
-      pasting = false;
-      buffer = '';
+      clearTimeout(pasteTimeout!);
+      pasteTimeout = null;
+
+      if (pasting) {
+        key.name = 'paste';
+        key.sequence = buffer.replace(/\x1B\[201~/g, '');
+        key.ctrl = false;
+        key.shift = false;
+        key.meta = false;
+        key.fn = false;
+        key.printable = true;
+        onKeypress(buffer, key, close);
+        clearPasteState();
+      }
       return;
     }
 
     if (pasting) {
-      buffer += key.sequence?.replace(/\r/g, '\n') || '';
+      if (buffer.length < MAX_PASTE_BUFFER) {
+        buffer += key.sequence?.replace(/\r/g, '\n') || '';
+      } else {
+        clearPasteState();
+      }
       return;
     }
 
@@ -135,9 +165,13 @@ export const emitKeypress = ({
 
       const shortcut = key.shortcut ? sortShortcutModifier(key.shortcut) : createShortcut(key);
 
+      if (!key.shortcut && hasModifier(key)) {
+        key.shortcut = shortcut;
+      }
+
       for (const mapping of keymap) {
         if (mapping.sequence) {
-          if (key.sequence === mapping.sequence) {
+          if (key.sequence === mapping.sequence && hasMatchingModifiers(key, mapping)) {
             key = { ...key, ...mapping };
             addShortcut = false;
             break;
@@ -152,7 +186,7 @@ export const emitKeypress = ({
         }
 
         // Only continue comparison if the custom key mapping does not have a sequence
-        if ((shortcut === mapping.shortcut) || (key.name && key.name === mapping.shortcut)) {
+        if ((shortcut === mapping.shortcut) || (key.name && key.name === mapping.shortcut && hasMatchingModifiers(key, mapping))) {
           key = { ...key, ...mapping };
           addShortcut = false;
           break;
@@ -172,6 +206,19 @@ export const emitKeypress = ({
     }
   }
 
+  function close() {
+    if (closed) return;
+    if (!isWindows && input.isTTY) input.setRawMode(isRaw);
+    if (hideCursor) cursor.show(output);
+    if (onMousepress) disableMouse(output);
+    if (enablePasteMode) disablePaste(output);
+    if (onKeypress) input.off('keypress', handleKeypress);
+    if (pasteTimeout) clearTimeout(pasteTimeout);
+    closed = true;
+    input.pause();
+    onExit?.();
+  }
+
   emitKeypressEvents(input);
 
   if (onMousepress) {
@@ -180,17 +227,6 @@ export const emitKeypress = ({
 
   if (enablePasteMode === true) {
     enablePaste(output);
-  }
-
-  function close() {
-    if (closed) return;
-    if (!isWindows && input.isTTY) input.setRawMode(isRaw);
-    if (onKeypress) input.off('keypress', handleKeypress);
-    if (onMousepress) disableMouse(output);
-    if (hideCursor) cursor.show(output);
-    closed = true;
-    input.pause();
-    onExit?.();
   }
 
   // Disable automatic character echoing
@@ -207,9 +243,9 @@ export const emitKeypress = ({
   }
 
   if (handleClose !== false) {
-    process.on('uncaughtException', close);
-    process.on('SIGINT', close);
-    process.on('exit', close);
+    process.once('uncaughtException', close);
+    process.once('SIGINT', close);
+    process.once('exit', close);
   }
 
   return close;
