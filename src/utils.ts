@@ -1,7 +1,7 @@
 /* eslint-disable no-control-regex */
 import type readline from 'node:readline';
-export const PRINTABLE_CHAR_REGEX = /^[\p{L}\p{N}\p{P}\p{S}\p{Z}\p{Sm}/]+$/u;
-export const NON_PRINTABLE_CHAR_REGEX = /[^\P{Cc}\P{Cf}\p{L}\p{N}\p{P}\p{S}\p{Z}]/u;
+export const PRINTABLE_CHAR_REGEX = /^(?:[\p{L}\p{N}\p{P}\p{S}\p{Z}\p{Sm}\p{M}]|\p{L}\p{M}*)+$/u;
+export const NON_PRINTABLE_CHAR_REGEX = /[\p{Cc}\p{Cf}]/u;
 
 export const metaKeys = new Set(['alt', 'meta', 'option']);
 export const modifierKeys = ['fn', 'ctrl', 'shift', ...[...metaKeys], 'cmd'];
@@ -122,8 +122,10 @@ export const prioritizeKeymap = (keymap: any = []) => {
     .filter(k => k.shortcut?.startsWith('-'))
     .map(k => sortShortcutModifier(k.shortcut.slice(1)));
 
+  const isBuiltIn = k => !k.weight || k.weight <= 0;
+
   const bindings = sortShortcutModifiers(keymap)
-    .filter(k => !omit.includes(k.shortcut));
+    .filter(k => !isBuiltIn(k) || !omit.includes(k.shortcut));
 
   bindings.sort((a, b) => {
     a.weight ||= 0;
