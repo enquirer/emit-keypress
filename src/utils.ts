@@ -1,6 +1,6 @@
 /* eslint-disable no-control-regex */
 import type readline from 'node:readline';
-export const PRINTABLE_CHAR_REGEX = /^(?:[\p{L}\p{N}\p{P}\p{S}\p{Z}\p{Sm}\p{M}]|\p{L}\p{M}*)+$/u;
+export const PRINTABLE_CHAR_REGEX = /^(?!.*[\uFEFF])[\p{L}\p{N}\p{P}\p{S}\p{Z}\p{M}\s]+$/u;
 export const NON_PRINTABLE_CHAR_REGEX = /[\p{Cc}\p{Cf}]/u;
 
 export const metaKeys = new Set(['alt', 'meta', 'option']);
