@@ -58,6 +58,23 @@ const hasModifier = (key: readline.Key) => {
   return key.ctrl || key.shift || key.meta || key.fn;
 };
 
+const onExitHandlers = globalThis.onExitHandlers ||= [];
+const onExitHandler = () => {
+  for (const fn of onExitHandlers) {
+    if (!fn.called) {
+      fn.called = true;
+      fn();
+    }
+  }
+};
+
+if (!globalThis.exitHandlers) {
+  globalThis.exitHandlers = onExitHandlers;
+  process.once('uncaughtException', onExitHandler);
+  process.once('SIGINT', onExitHandler);
+  process.once('exit', onExitHandler);
+}
+
 export const emitKeypress = ({
   input = stdin,
   output = stdout,
@@ -243,9 +260,7 @@ export const emitKeypress = ({
   }
 
   if (handleClose !== false) {
-    process.once('uncaughtException', close);
-    process.once('SIGINT', close);
-    process.once('exit', close);
+    onExitHandlers.push(close);
   }
 
   return close;
