@@ -16,11 +16,11 @@ import {
 export * from '~/utils';
 
 const ESC = '\x1b';
+const isWindows = globalThis.process.platform === 'win32';
+
+const MAX_PASTE_BUFFER = 1024 * 1024; // 1MB limit for paste buffer
 const ENABLE_PASTE_BRACKET_MODE = `${ESC}[?2004h`;
 const DISABLE_PASTE_BRACKET_MODE = `${ESC}[?2004l`;
-
-const isWindows = globalThis.process.platform === 'win32';
-const MAX_PASTE_BUFFER = 1024 * 1024; // 1MB limit for paste buffer
 
 export const enablePaste = (stdout: NodeJS.WriteStream) => {
   stdout.write(ENABLE_PASTE_BRACKET_MODE);
@@ -82,6 +82,7 @@ export const emitKeypress = ({
   onKeypress,
   onMousepress,
   onExit,
+  escapeCodeTimeout = 500,
   handleClose = true,
   hideCursor = false,
   initialPosition = false,
@@ -236,7 +237,7 @@ export const emitKeypress = ({
     onExit?.();
   }
 
-  emitKeypressEvents(input);
+  emitKeypressEvents(input, { escapeCodeTimeout });
 
   if (onMousepress) {
     enableMouse(output);
