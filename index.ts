@@ -50,11 +50,11 @@ export const cursor = {
   }
 };
 
-const hasMatchingModifiers = (a: readline.Key, b) => {
+export const hasMatchingModifiers = (a: readline.Key, b) => {
   return a.ctrl === b.ctrl && a.shift === b.shift && a.meta === b.meta && a.fn === b.fn;
 };
 
-const hasModifier = (key: readline.Key) => {
+export const hasModifier = (key: readline.Key) => {
   return key.ctrl || key.shift || key.meta || key.fn;
 };
 
@@ -114,6 +114,7 @@ export const emitKeypress = ({
   const clearPasteState = () => {
     pasting = false;
     buffer = '';
+
     if (pasteTimeout) {
       clearTimeout(pasteTimeout);
       pasteTimeout = null;
@@ -204,7 +205,10 @@ export const emitKeypress = ({
         }
 
         // Only continue comparison if the custom key mapping does not have a sequence
-        if ((shortcut === mapping.shortcut) || (key.name && key.name === mapping.shortcut && hasMatchingModifiers(key, mapping))) {
+        if (
+          (shortcut === mapping.shortcut) ||
+          (key.name && key.name === mapping.shortcut && hasMatchingModifiers(key, mapping))
+        ) {
           key = { ...key, ...mapping };
           addShortcut = false;
           break;

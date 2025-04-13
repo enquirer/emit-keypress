@@ -27,6 +27,7 @@
     "esbuild-register": "^3.5.0",
     "eslint": "^8.57.0",
     "gulp-format-md": "^2.0.0",
+    "log-update": "^6.1.0",
     "ts-mocha": "^10.0.0",
     "tsconfig-paths": "^4.2.0",
     "tsup": "^8.0.2",

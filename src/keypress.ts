@@ -452,11 +452,11 @@ export function * emitKeys(stream) {
       }
 
     } else if (ch === '\r') {
-      // carriage return
+      // carriage return / return
       key.name = 'return';
       key.meta = escaped;
     } else if (ch === '\n') {
-      // Enter, should have been called linefeed
+      // linefeed / newline
       key.name = 'enter';
       key.meta = escaped;
     } else if (ch === '\t') {

@@ -33,4 +33,5 @@ for (const arrow of arrows) {
 
 shortcuts.sort();
 shortcuts.sort((a, b) => a.split('+').length - b.split('+').length);
-console.log(JSON.stringify(shortcuts));
+console.log(shortcuts);
+// console.log(JSON.stringify(shortcuts));

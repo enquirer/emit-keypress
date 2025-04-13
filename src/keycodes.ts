@@ -60,7 +60,7 @@ export const keycodes = [
   { sequence: '\x07', shortcut: 'ctrl+g' },
   // { sequence: '\b', shortcut: 'ctrl+h' },
   { sequence: '\t', shortcut: 'ctrl+i' },
-  { sequence: '\n', shortcut: 'ctrl+j' },
+  { sequence: '\n', shortcut: 'ctrl+j', command: 'enter' },
   { sequence: '\x0B', shortcut: 'ctrl+k' },
   { sequence: '\f', shortcut: 'ctrl+l' },
   { sequence: '\x0E', shortcut: 'ctrl+n' },

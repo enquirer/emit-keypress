@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { PRINTABLE_CHAR_REGEX, NON_PRINTABLE_CHAR_REGEX } from '~/utils';
 
-describe.only('PRINTABLE_CHAR_REGEX', () => {
+describe('PRINTABLE_CHAR_REGEX', () => {
   describe('Latin characters', () => {
     it('should match basic Latin letters', () => {
       assert.match('abcdefghijklmnopqrstuvwxyz', PRINTABLE_CHAR_REGEX);

@@ -1,4 +1,4 @@
-export const keymap = [
+export const keycodes = [
   { shortcut: 'return', command: 'submit', sequence: '\r', weight: Infinity },
   { shortcut: 'escape', command: 'cancel', sequence: '\x1B', weight: Infinity },
 
@@ -14,8 +14,10 @@ export const keymap = [
   { shortcut: 'delete', command: 'delete', sequence: '\x1B[3~', weight: 0, when: 'kind === "string"' },
   { shortcut: 'delete', command: 'delete_forward', sequence: '\u007F', weight: 0, when: 'kind === "string"' },
   { shortcut: 'delete', command: 'delete', sequence: '\u007F', weight: 0, when: 'kind === "string"' },
-  { shortcut: 'space', command: 'toggle', when: 'type === "multiselect" || focused?.kind === "boolean"', sequence: '\u0020', weight: 0 },
+  { shortcut: 'space', command: 'toggle', when: 'type === "multiselect" || focused.kind === "boolean"', sequence: '\u0020', weight: 0 },
+  { shortcut: 'space', command: 'toggle', when: 'type === "select" && focused.is_collapsible', sequence: '\u0020', weight: 0 },
   { shortcut: 'space', command: 'append', sequence: '\u0020', weight: 0, when: 'kind === "string"' },
+  { shortcut: 'space', command: 'toggle', sequence: ' ', weight: 0 },
   { shortcut: 'backspace', command: 'backspace', sequence: '\u0008', weight: 0, when: 'kind === "string"' },
   { shortcut: 'backspace', command: 'delete', sequence: '\u0008', weight: 0, when: 'kind === "string"' },
   { shortcut: 'enter', command: 'enter', sequence: '\u000D', weight: 0 },
@@ -78,13 +80,13 @@ export const keymap = [
 
   { shortcut: 'number', command: 'number', sequence: '[0-9]', test: /^[0-9.]+/, weight: 0 },
 
-  { shortcut: 'left', command: 'prev_tabstop', when: 'options?.tabstops === true', sequence: '\x1B[D' },
-  { shortcut: 'left', command: 'prev_page', when: 'options?.paginate !== false', sequence: '\x1B[D' },
+  { shortcut: 'left', command: 'prev_tabstop', when: 'options.tabstops === true', sequence: '\x1B[D' },
+  { shortcut: 'left', command: 'prev_page', when: 'options.paginate !== false', sequence: '\x1B[D' },
   { shortcut: 'left', command: 'move_left', sequence: '\x1B[D' },
   { shortcut: 'left', command: 'left', sequence: '\x1B[D', weight: 0 },
 
-  { shortcut: 'right', command: 'next_tabstop', when: 'options?.tabstops === true', sequence: '\x1B[C' },
-  { shortcut: 'right', command: 'next_page', when: 'options?.paginate !== false', sequence: '\x1B[C' },
+  { shortcut: 'right', command: 'next_tabstop', when: 'options.tabstops === true', sequence: '\x1B[C' },
+  { shortcut: 'right', command: 'next_page', when: 'options.paginate !== false', sequence: '\x1B[C' },
   { shortcut: 'right', command: 'move_right', sequence: '\x1B[C' },
   { shortcut: 'right', command: 'right', sequence: '\x1B[C', weight: 0 },
 
@@ -94,11 +96,11 @@ export const keymap = [
   { shortcut: 'shift+tab', command: 'shift_tab', sequence: '\x1B[Z', weight: 0, when: 'kind === "string"' },
   { shortcut: 'shift+tab', command: 'prev', sequence: '\x1B[Z', weight: 0 },
 
-  { shortcut: 'shift+up', command: 'move_up', when: 'options?.sort !== false', sequence: '\x1B[1;2A', weight: 0 },
-  { shortcut: 'shift+up', command: 'scroll_up', when: 'options?.paginate !== true && options?.scroll !== false', sequence: '\x1B[1;2A', weight: 0 },
+  { shortcut: 'shift+up', command: 'move_up', when: 'options.sort !== false', sequence: '\x1B[1;2A', weight: 0 },
+  { shortcut: 'shift+up', command: 'scroll_up', when: 'options.paginate !== true && options.scroll !== false', sequence: '\x1B[1;2A', weight: 0 },
 
-  { shortcut: 'shift+down', command: 'move_down', when: 'options?.sort !== false', sequence: '\x1B[1;2B', weight: 0 },
-  { shortcut: 'shift+down', command: 'scroll_down', when: 'options?.paginate !== true && options?.scroll !== false', sequence: '\x1B[1;2B', weight: 0 },
+  { shortcut: 'shift+down', command: 'move_down', when: 'options.sort !== false', sequence: '\x1B[1;2B', weight: 0 },
+  { shortcut: 'shift+down', command: 'scroll_down', when: 'options.paginate !== true && options.scroll !== false', sequence: '\x1B[1;2B', weight: 0 },
 
   { shortcut: 'shift+left', command: 'select_left', sequence: '\x1B[1;2D', weight: 0 },
   { shortcut: 'shift+right', command: 'select_right', sequence: '\x1B[1;2C', weight: 0 },
@@ -167,13 +169,13 @@ export const keymap = [
 
   { shortcut: 'meta+d', command: 'cut_word_right', sequence: '\x1Bd', weight: 0 },
   { shortcut: 'fn+meta+down', command: 'expand_down', sequence: '\x1B[1;3B', weight: 0 },
-  { shortcut: 'meta+down', command: 'move_paragraph_down', sequence: '\x1B[1;9B', weight: 0 },
   { shortcut: 'meta+left', command: 'cut_word_left', sequence: '\x1B[1;3D', weight: 0 },
   { shortcut: 'meta+left', command: 'move_word_left', sequence: '\x1B\x1B[C', weight: 0 },
   { shortcut: 'meta+right', command: 'move_word_right', sequence: '\x1B\x1B[C', weight: 0 },
   { shortcut: 'meta+space', command: 'alt_space', sequence: '\x1B ', weight: -1 },
   { shortcut: 'meta+up', command: 'expand_up', sequence: '\x1B[1;3A', weight: 0 },
   { shortcut: 'meta+up', command: 'move_paragraph_up', sequence: '\x1B[1;9A', weight: 0 },
+  { shortcut: 'meta+down', command: 'move_paragraph_down', sequence: '\x1B[1;9B', weight: 0 },
 
   { shortcut: 'shift+f1', command: '', sequence: '\x1B[1;2P', weight: 0 },
   { shortcut: 'shift+f2', command: '', sequence: '\x1B[1;2Q', weight: 0 },
@@ -201,8 +203,8 @@ export const keymap = [
   { shortcut: 'f12', command: 'inspect', sequence: '\x1B[24~', weight: 0 }
 ];
 
-// const withDescriptions = keymap.filter(b => b.description);
-// const withoutDescriptions = keymap.filter(b => !b.description);
+// const withDescriptions = keycodes.filter(b => b.description);
+// const withoutDescriptions = keycodes.filter(b => !b.description);
 
-// const shiftUp = keymap.find(b => b.shortcut === 'shift+up');
+// const shiftUp = keycodes.find(b => b.shortcut === 'shift+up');
 // console.debug(shiftUp);

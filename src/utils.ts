@@ -5,6 +5,23 @@ export const NON_PRINTABLE_CHAR_REGEX = /[\p{Cc}\p{Cf}]/u;
 
 export const metaKeys = new Set(['alt', 'meta', 'option']);
 export const modifierKeys = ['fn', 'ctrl', 'shift', ...[...metaKeys], 'cmd'];
+export const sortOrder = [
+  'sequence',
+  'name',
+  'shortcut',
+  'command',
+  'ctrl',
+  'shift',
+  'alt',
+  'option',
+  'meta',
+  'fn',
+  'printable',
+  'pasted',
+  'weight'
+];
+
+export const isBuiltIn = k => !k.weight || k.weight <= 0;
 
 // Based on isMouse from chjj/blessed
 // Copyright (c) 2013-2015, Christopher Jeffrey and contributors
@@ -38,21 +55,7 @@ export const parsePosition = input => {
   return null;
 };
 
-const order = [
-  'sequence',
-  'name',
-  'shortcut',
-  'command',
-  'ctrl',
-  'shift',
-  'meta',
-  'fn',
-  'printable',
-  'pasted',
-  'weight'
-];
-
-export const sortKeys = (obj, keys = order) => {
+export const sortKeys = (obj, keys = sortOrder) => {
   const ordered = {};
 
   for (const key of keys) {
@@ -68,6 +71,14 @@ export const sortKeys = (obj, keys = order) => {
   }
 
   return ordered;
+};
+
+const normalizeModifiers = (key: string) => {
+  if (key === 'cmd') return 'meta';
+  if (key === 'option') return 'alt';
+  if (key === 'control') return 'ctrl';
+  if (key === 'command') return 'cmd';
+  return key;
 };
 
 export const sortModifiers = (names: string[]): string[] => {
@@ -92,11 +103,10 @@ export const sortModifiers = (names: string[]): string[] => {
 export const createShortcut = (key: readline.Key): string => {
   const modifiers = new Set();
   if (key.fn) modifiers.add('fn');
-  if (key.ctrl) modifiers.add('ctrl');
   if (key.shift) modifiers.add('shift');
-  if (key.alt) modifiers.add('meta');
-  if (key.option) modifiers.add('meta');
-  if (key.meta) modifiers.add('meta');
+  if (key.alt || key.option || key.meta) modifiers.add('meta');
+  if (key.ctrl || key.control) modifiers.add('ctrl');
+  if (key.cmd || key.command) modifiers.add('cmd');
 
   let keyName = isPrintableCharacter(key.sequence) ? key.sequence : key.name;
   if (keyName === 'undefined') keyName = '';
@@ -113,7 +123,10 @@ export const sortShortcutModifier = shortcut => {
 };
 
 export const sortShortcutModifiers = (keymap = []) => {
-  for (const key of keymap) key.shortcut = sortShortcutModifier(key.shortcut);
+  for (const key of keymap) {
+    key.shortcut = sortShortcutModifier(key.shortcut);
+  }
+
   return keymap;
 };
 
@@ -122,16 +135,13 @@ export const prioritizeKeymap = (keymap: any = []) => {
     .filter(k => k.shortcut?.startsWith('-'))
     .map(k => sortShortcutModifier(k.shortcut.slice(1)));
 
-  const isBuiltIn = k => !k.weight || k.weight <= 0;
-
   const bindings = sortShortcutModifiers(keymap)
     .filter(k => !isBuiltIn(k) || !omit.includes(k.shortcut));
 
   bindings.sort((a, b) => {
     a.weight ||= 0;
     b.weight ||= 0;
-    if (a.weight === b.weight) return 0;
-    return a.weight > b.weight ? 1 : -1;
+    return a.weight === b.weight ? 0 : a.weight > b.weight ? 1 : -1;
   });
 
   return bindings;
