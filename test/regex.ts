@@ -91,20 +91,20 @@ describe('PRINTABLE_CHAR_REGEX', () => {
 describe('NON_PRINTABLE_CHAR_REGEX', () => {
   describe('Control characters', () => {
     it('should match ASCII control characters', () => {
-      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u0000')); // Null
-      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u0001')); // Start of Heading
-      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u0007')); // Bell
-      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u001B')); // Escape
+      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u0000'), 'Null');
+      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u0001'), 'Start of Heading');
+      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u0007'), 'Bell');
+      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u001B'), 'Escape');
     });
 
     it('should match format control characters', () => {
-      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u200B')); // Zero Width Space
-      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u200E')); // Left-to-Right Mark
-      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u2028')); // Line Separator
-      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u2029')); // Paragraph Separator
+      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u200B'), 'Zero Width Space');
+      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u200E'), 'Left-to-Right Mark');
+      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u2028'), 'Line Separator');
+      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\u2029'), 'Paragraph Separator');
+      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\n'), 'Newline');
 
-      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('/')); // Slash
-      assert.ok(NON_PRINTABLE_CHAR_REGEX.test('\n')); // Newline
+      assert.ok(!NON_PRINTABLE_CHAR_REGEX.test('/'), 'Slash');
     });
   });
 
@@ -142,6 +142,10 @@ describe('NON_PRINTABLE_CHAR_REGEX', () => {
 
     it('should allow specific symbols like emojis', () => {
       assert.match('😀🎉💯👌', PRINTABLE_CHAR_REGEX);
+    });
+
+    it('should match emoji sequences', () => {
+      assert.match('👩‍👩‍👧‍👦', PRINTABLE_CHAR_REGEX);
     });
 
     describe('Boundary Checks', () => {

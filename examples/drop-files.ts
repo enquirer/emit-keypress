@@ -3,6 +3,8 @@ import { emitKeypress, keycodes } from '../index';
 
 emitKeypress({
   keymap: keycodes,
+  enablePasteMode: true,
+
   onKeypress: async (input, key, close) => {
     const files = input.split(/(?<!\\)\s+/).filter(Boolean);
     let count = 0;

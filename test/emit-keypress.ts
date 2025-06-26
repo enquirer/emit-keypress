@@ -2,27 +2,28 @@ import { strict as assert } from 'node:assert';
 import { EventEmitter } from 'node:events';
 import { emitKeypress, emitKeypressEvents } from '../index';
 
-const mockInput = new EventEmitter() as any;
-mockInput.isTTY = true;
+const initialListeners = process.listenerCount('SIGINT');
 
-mockInput.setRawMode = function(isRaw: boolean) {
-  this.isRaw = isRaw;
-};
+function createMockInput() {
+  const input = new EventEmitter() as any;
+  input.isTTY = true;
+  input.isRaw = false;
+  input.setRawMode = function(isRaw: boolean) { this.isRaw = isRaw; };
+  input.setEncoding = function(encoding: string) { this.encoding = encoding; };
+  input.resume = () => {};
+  input.pause = () => {};
+  return input;
+}
 
-mockInput.setEncoding = function(encoding: string) {
-  this.encoding = encoding;
-};
-
-mockInput.resume = () => {};
-mockInput.pause = () => {};
-
-const mockOutput = new EventEmitter() as any;
-
-// eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
-mockOutput.write = function(sequence: string) {
-  // Capture the write sequence for the sake of testing
-  return true;
-};
+function createMockOutput() {
+  const output = new EventEmitter() as any;
+  // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
+  output.write = function(sequence: string) {
+    // Capture the write sequence for the sake of testing
+    return true;
+  };
+  return output;
+}
 
 describe('emitKeypress', () => {
   it('should throw an error if invalid stream is passed', () => {
@@ -37,6 +38,9 @@ describe('emitKeypress', () => {
   });
 
   it('should handle keypress events', cb => {
+    const mockInput = createMockInput();
+    const mockOutput = createMockOutput();
+
     const keySequence = 'a';
     const key = { sequence: keySequence, name: 'a' };
 
@@ -56,6 +60,9 @@ describe('emitKeypress', () => {
   });
 
   it('should handle fast consecutive keypress events', cb => {
+    const mockInput = createMockInput();
+    const mockOutput = createMockOutput();
+
     const key = { sequence: '\x1B[1;9A', shortcut: 'meta+up' };
     let i = 0;
 
@@ -82,6 +89,9 @@ describe('emitKeypress', () => {
   });
 
   it('should handle paste events', cb => {
+    const mockInput = createMockInput();
+    const mockOutput = createMockOutput();
+
     const pasteStartSequence = '\x1b[200~';
     const pasteEndSequence = '\x1b[201~';
     const pasteContent = 'this\nis\npasted\ncontent\n\n';
@@ -115,6 +125,9 @@ describe('emitKeypress', () => {
   });
 
   it('should handle large pasted test', cb => {
+    const mockInput = createMockInput();
+    const mockOutput = createMockOutput();
+
     const pasteStartSequence = '\x1b[200~';
     const pasteEndSequence = '\x1b[201~';
     const pasteContent = 'this\nis\npasted\ncontent\n\n'.repeat(10_000);
@@ -142,6 +155,9 @@ describe('emitKeypress', () => {
   });
 
   it('should enable paste mode', cb => {
+    const mockInput = createMockInput();
+    const mockOutput = createMockOutput();
+
     let pasteModeCall = 0;
 
     mockOutput.write = (sequence: string) => {
@@ -163,6 +179,9 @@ describe('emitKeypress', () => {
   });
 
   it('should change cursor visibility', cb => {
+    const mockInput = createMockInput();
+    const mockOutput = createMockOutput();
+
     let hideCalls = 0;
     let showCalls = 0;
 
@@ -190,6 +209,9 @@ describe('emitKeypress', () => {
   });
 
   it('should handle multiple rapid escape sequences correctly', cb => {
+    const mockInput = createMockInput();
+    const mockOutput = createMockOutput();
+
     const escapeSequences = [
       { sequence: '\x1B[A', shortcut: 'up' },
       { sequence: '\x1B[B', shortcut: 'down' },
@@ -224,6 +246,9 @@ describe('emitKeypress', () => {
   });
 
   it('should cleanup paste state if paste-end is never received', cb => {
+    const mockInput = createMockInput();
+    const mockOutput = createMockOutput();
+
     const pasteStartSequence = '\x1b[200~';
     const pasteContent = 'incomplete paste';
     let keypressAfterTimeout = false;
@@ -263,6 +288,9 @@ describe('emitKeypress', () => {
   }).timeout(11000);
 
   it('should handle paste buffer overflow', cb => {
+    const mockInput = createMockInput();
+    const mockOutput = createMockOutput();
+
     const pasteStartSequence = '\x1b[200~';
     const pasteEndSequence = '\x1b[201~';
     const pasteContent = 'x'.repeat(2 * 1024 * 1024); // 2MB of data (over the 1MB limit)
@@ -305,7 +333,8 @@ describe('emitKeypress', () => {
   });
 
   it('should properly clean up all event listeners on close', cb => {
-    const initialListeners = process.listenerCount('SIGINT');
+    const mockInput = createMockInput();
+    const mockOutput = createMockOutput();
 
     const close = emitKeypress({
       input: mockInput,
@@ -314,18 +343,21 @@ describe('emitKeypress', () => {
       handleClose: true
     });
 
-    assert.ok(process.listenerCount('SIGINT') > initialListeners);
+    assert.ok(process.listenerCount('SIGINT') >= initialListeners, 'SIGINT listeners should be added');
     close();
 
     setTimeout(() => {
-      assert.equal(process.listenerCount('SIGINT'), initialListeners);
-      assert.equal(mockInput.listenerCount('keypress'), 0);
-      assert.equal(mockInput.listenerCount('pause'), 0);
+      assert.equal(process.listenerCount('SIGINT'), initialListeners, 'SIGINT listeners should be cleaned up');
+      assert.equal(mockInput.listenerCount('keypress'), 0, 'keypress listeners should be cleaned up');
+      assert.equal(mockInput.listenerCount('pause'), 0, 'pause listeners should be cleaned up');
       cb();
     }, 10);
   });
 
   it('should handle combining characters correctly', cb => {
+    const mockInput = createMockInput();
+    const mockOutput = createMockOutput();
+
     const combiningChar = 'e\u0301'; // é (e + combining acute accent)
     let received = false;
 

@@ -1,10 +1,10 @@
 /* eslint-disable no-control-regex */
 import type readline from 'node:readline';
-export const PRINTABLE_CHAR_REGEX = /^(?!.*[\uFEFF])[\p{L}\p{N}\p{P}\p{S}\p{Z}\p{M}\s]+$/u;
-export const NON_PRINTABLE_CHAR_REGEX = /[\p{Cc}\p{Cf}]/u;
+export const PRINTABLE_CHAR_REGEX = /^(?!.*[\uFEFF])[\p{L}\p{N}\p{P}\p{S}\p{Z}\p{M}\u200D\s]+$/u;
+export const NON_PRINTABLE_CHAR_REGEX = /[\p{Cc}\p{Cf}\u2028\u2029]/u;
 
 export const metaKeys = new Set(['alt', 'meta', 'option']);
-export const modifierKeys = ['fn', 'ctrl', 'shift', ...[...metaKeys], 'cmd'];
+export const modifierKeys = new Set(['fn', 'ctrl', 'shift', ...[...metaKeys], 'cmd']);
 export const sortOrder = [
   'sequence',
   'name',
@@ -26,8 +26,12 @@ export const isBuiltIn = k => !k.weight || k.weight <= 0;
 // Based on isMouse from chjj/blessed
 // Copyright (c) 2013-2015, Christopher Jeffrey and contributors
 export function isMousepress(input, key) {
-  if (key.code === '[M' || key.code === '[I' || key.code === '[O') {
+  if (key?.code && (key.code === '[M' || key.code === '[I' || key.code === '[O')) {
     return true;
+  }
+
+  if (typeof input !== 'string') {
+    return false;
   }
 
   return /\x1b\[M/.test(input)
@@ -73,7 +77,7 @@ export const sortKeys = (obj, keys = sortOrder) => {
   return ordered;
 };
 
-const normalizeModifiers = (key: string) => {
+const normalizeModifier = (key: string) => {
   if (key === 'cmd') return 'meta';
   if (key === 'option') return 'alt';
   if (key === 'control') return 'ctrl';
@@ -82,16 +86,17 @@ const normalizeModifiers = (key: string) => {
 };
 
 export const sortModifiers = (names: string[]): string[] => {
+  const normalized = names.map(name => normalizeModifier(name.toLowerCase()));
   const modifiers = [];
   const after = [];
 
   for (const name of modifierKeys) {
-    if (names.includes(name)) {
+    if (normalized.includes(name)) {
       modifiers.push(name);
     }
   }
 
-  for (const name of names) {
+  for (const name of normalized) {
     if (!modifiers.includes(name)) {
       after.push(name);
     }
@@ -102,6 +107,7 @@ export const sortModifiers = (names: string[]): string[] => {
 
 export const createShortcut = (key: readline.Key): string => {
   const modifiers = new Set();
+
   if (key.fn) modifiers.add('fn');
   if (key.shift) modifiers.add('shift');
   if (key.alt || key.option || key.meta) modifiers.add('meta');

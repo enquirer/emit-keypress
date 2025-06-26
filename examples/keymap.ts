@@ -3,6 +3,7 @@ import { emitKeypress } from '../index';
 emitKeypress({
   input: process.stdin,
   keymap: [
+    { shortcut: 'space', command: 'toggle' },
     { shortcut: 'escape', command: 'cancel' },
     { shortcut: 'ctrl+c', command: 'cancel' },
     { shortcut: 'ctrl+o', command: 'open' },

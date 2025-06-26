@@ -64,7 +64,7 @@ export function emitKeypressEvents(stream, iface = {}) {
       }
     } else {
       // Nobody's watching anyway
-      stream.removeListener('data', onData);
+      stream.off('data', onData);
       stream.on('newListener', onNewListener);
     }
   }
@@ -72,7 +72,7 @@ export function emitKeypressEvents(stream, iface = {}) {
   function onNewListener(event) {
     if (event === 'keypress') {
       stream.on('data', onData);
-      stream.removeListener('newListener', onNewListener);
+      stream.off('newListener', onNewListener);
     }
   }
 
