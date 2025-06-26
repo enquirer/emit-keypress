@@ -130,7 +130,7 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
   const emitKeypress = ({
     input = stdin,
     output = stdout,
-    keymap: customKeymap = [],
+    keymap = [],
     onKeypress,
     onMousepress,
     onExit,
@@ -172,6 +172,10 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
         pasteTimeout = null;
       }
     };
+
+    if (typeof keymap === 'function') {
+      keymap = keymap();
+    }
 
     // eslint-disable-next-line complexity
     async function handleKeypress(input: string, key: readline.Key) {
@@ -224,8 +228,6 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
         onMousepress?.(k, close);
       } else {
         let addShortcut = false;
-
-        let keymap = typeof customKeymap === 'function' ? customKeymap() : customKeymap;
 
         if (!sorted) {
           keymap = prioritizeKeymap(keymap);
