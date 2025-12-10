@@ -23,6 +23,14 @@ CSI.kClearToLineEnd = CSI`0K`;
 CSI.kClearLine = CSI`2K`;
 CSI.kClearScreenDown = CSI`0J`;
 
+// CSI u (fixterms/kitty) protocol sequences for enabling enhanced key reporting
+// Enable with: process.stdout.write(CSI_U_ENABLE)
+// Disable with: process.stdout.write(CSI_U_DISABLE)
+export const CSI_U_ENABLE = `${kEscape}[>4;1m`; // modifyOtherKeys mode 1
+export const CSI_U_DISABLE = `${kEscape}[>4;0m`;
+export const KITTY_ENABLE = `${kEscape}[>1u`; // kitty protocol
+export const KITTY_DISABLE = `${kEscape}[<u`;
+
 // TODO(BridgeAR): Treat combined characters as single character, i.e,
 // 'a\u0301' and '\u0301a' (both have the same visual output).
 // Check Canonical_Combining_Class in
@@ -72,6 +80,13 @@ export function charLengthAt(str, i) {
                 (ctrl      * 4) +
                 (right_alt * 8)
   - two leading ESCs apparently mean the same as one leading ESC
+
+  CSI u (fixterms/kitty) format:
+  ESC [ charcode ; modifier u
+
+  - charcode is the unicode codepoint
+  - modifier follows same formula as above
+  - e.g. Ctrl+Shift+S = ESC [ 115 ; 6 u (115 = 's', 6 = 1 + 1 + 4)
 */
 
 // eslint-disable-next-line complexity
@@ -188,6 +203,51 @@ export function * emitKeys(stream) {
          */
         const cmd = s.slice(cmdStart);
         let match;
+
+        // Special key names for CSI u parsing
+        const SPECIAL_NAMES = {
+          8: 'backspace', // BS (ctrl+h legacy)
+          9: 'tab',
+          10: 'enter', // LF
+          13: 'return', // CR
+          27: 'escape',
+          32: 'space',
+          127: 'backspace' // DEL
+        };
+
+        // CSI u (kitty) format: \x1b[<charcode>;<modifier>u
+        // e.g. Ctrl+Shift+S = \x1b[115;6u or \x1b[83;5u
+        if ((match = /^(\d+);(\d+)u$/.exec(cmd))) {
+          const charCode = parseInt(match[1], 10);
+          modifier = parseInt(match[2], 10) - 1;
+          const char = String.fromCharCode(charCode);
+          key.name = SPECIAL_NAMES[charCode] || char.toLowerCase();
+          key.ctrl = Boolean(modifier & 4);
+          key.meta = Boolean(modifier & 10);
+          key.shift = Boolean(modifier & 1) || char !== char.toLowerCase();
+          key.code = `[${match[1]}u`;
+          key.sequence = s;
+
+          stream.emit('keypress', undefined, key);
+          continue;
+        }
+
+        // modifyOtherKeys format: \x1b[27;<modifier>;<charcode>~
+        // e.g. Ctrl+Shift+S = \x1b[27;6;115~
+        if ((match = /^27;(\d+);(\d+)~$/.exec(cmd))) {
+          modifier = parseInt(match[1], 10) - 1;
+          const charCode = parseInt(match[2], 10);
+          const char = String.fromCharCode(charCode);
+          key.name = SPECIAL_NAMES[charCode] || char.toLowerCase();
+          key.ctrl = Boolean(modifier & 4);
+          key.meta = Boolean(modifier & 10);
+          key.shift = Boolean(modifier & 1) || char !== char.toLowerCase();
+          key.code = `[27;${match[1]};${match[2]}~`;
+          key.sequence = s;
+
+          stream.emit('keypress', undefined, key);
+          continue;
+        }
 
         if ((match = /^(?:(\d\d?)(?:;(\d))?([~^$])|(\d{3}~))$/.exec(cmd))) {
           if (match[4]) {

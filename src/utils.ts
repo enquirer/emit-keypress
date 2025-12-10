@@ -117,6 +117,10 @@ export const createShortcut = (key: readline.Key): string => {
   let keyName = isPrintableCharacter(key.sequence) ? key.sequence : key.name;
   if (keyName === 'undefined') keyName = '';
 
+  if (keyName === 'end' || keyName === 'home') {
+    modifiers.delete('fn');
+  }
+
   const output = modifiers.size > 0 && keyName
     ? `${sortModifiers([...modifiers]).join('+')}+${keyName}`
     : keyName;
@@ -147,10 +151,10 @@ export const prioritizeKeymap = (keymap: any = []) => {
   bindings.sort((a, b) => {
     a.weight ||= 0;
     b.weight ||= 0;
-    return a.weight === b.weight ? 0 : a.weight > b.weight ? 1 : -1;
+    return a.weight === b.weight ? 0 : b.weight > a.weight ? 1 : -1;
   });
 
-  return bindings;
+  return bindings.filter(b => b.weight !== -1);
 };
 
 // Unicode ranges for general printable characters including emojis

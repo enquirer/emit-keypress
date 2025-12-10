@@ -1,9 +1,12 @@
 /* eslint-disable no-control-regex  */
 import type readline from 'node:readline';
 import { stdin, stdout } from 'node:process';
+import { detectTerminal } from 'detect-terminal';
 import { emitKeypressEvents } from '~/emit-keypress';
 import { mousepress } from '~/mousepress';
 import { keycodes } from '~/keycodes';
+import { kEscape } from '~/keypress';
+import { enableKeyboardProtocol, resetKeyboardProtocol } from '~/keyboard-protocol';
 import {
   createShortcut,
   isMousepress,
@@ -15,14 +18,12 @@ import {
 
 export * from '~/utils';
 
-const ESC = '\x1b';
-const isWindows = globalThis.process.platform === 'win32';
-
-const MAX_PASTE_BUFFER = 1024 * 1024; // 1MB limit for paste buffer
-const ENABLE_PASTE_BRACKET_MODE = `${ESC}[?2004h`;
-const DISABLE_PASTE_BRACKET_MODE = `${ESC}[?2004l`;
-const ENABLE_MOUSE = `${ESC}[?1003h`;
-const DISABLE_MOUSE = `${ESC}[?1003l`;
+export const isWindows = globalThis.process.platform === 'win32';
+export const MAX_PASTE_BUFFER = 1024 * 1024; // 1MB limit for paste buffer
+export const ENABLE_PASTE_BRACKET_MODE = `${kEscape}[?2004h`;
+export const DISABLE_PASTE_BRACKET_MODE = `${kEscape}[?2004l`;
+export const ENABLE_MOUSE = `${kEscape}[?1003h`;
+export const DISABLE_MOUSE = `${kEscape}[?1003l`;
 
 export const enablePaste = (stdout: NodeJS.WriteStream) => {
   stdout.write(ENABLE_PASTE_BRACKET_MODE);
@@ -42,13 +43,13 @@ export const disableMouse = (stdout: NodeJS.WriteStream) => {
 
 export const cursor = {
   hide: (stdout: NodeJS.WriteStream) => {
-    stdout.write(`${ESC}[?25l`);
+    stdout.write(`${kEscape}[?25l`);
   },
   show: (stdout: NodeJS.WriteStream) => {
-    stdout.write(`${ESC}[?25h`);
+    stdout.write(`${kEscape}[?25h`);
   },
   position: (stdout: NodeJS.WriteStream) => {
-    stdout.write(`${ESC}[6n`);
+    stdout.write(`${kEscape}[6n`);
   }
 };
 
@@ -140,16 +141,26 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
     hideCursor = false,
     initialPosition = false,
     enablePasteMode = false,
-    pasteModeTimeout = 100
+    pasteModeTimeout = 100,
+    keyboardProtocol = false
   }: {
     // eslint-disable-next-line no-undef
     input?: NodeJS.ReadStream;
+    output?: NodeJS.WriteStream;
     keymap?: Array<{ sequence: string; shortcut: string }>;
     // eslint-disable-next-line no-unused-vars
     onKeypress: (input: string, key: readline.Key, close: () => void) => void;
     // eslint-disable-next-line no-unused-vars
     onMousepress?: (input: string, key: any, close: () => void) => void;
     onExit?: () => void;
+    maxPasteBuffer?: number;
+    escapeCodeTimeout?: number;
+    handleClose?: boolean;
+    hideCursor?: boolean;
+    initialPosition?: boolean;
+    enablePasteMode?: boolean;
+    pasteModeTimeout?: number;
+    keyboardProtocol?: boolean;
   }) => {
     if (!input || (input !== process.stdin && !input.isTTY)) {
       throw new Error('Invalid stream passed');
@@ -162,6 +173,7 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
     let sorted = false;
     let buffer = '';
     let pasteTimeout: NodeJS.Timeout | null = null;
+    let disableProtocol: (() => void) | null = null;
 
     const clearPasteState = () => {
       pasting = false;
@@ -234,6 +246,15 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
           sorted = true;
         }
 
+        const found = keymap.filter(k => k.sequence === key.sequence);
+
+        if (found.length === 1) {
+          key = { ...key, ...found[0] };
+          addShortcut = false;
+        }
+
+        // console.log({ found, key });
+
         const shortcut = key.shortcut
           ? sortShortcutModifier(key.shortcut)
           : createShortcut(key);
@@ -256,9 +277,7 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
           // Only continue comparison if the custom key mapping does not have a sequence
           if (
             shortcut === mapping.shortcut ||
-            (key.name &&
-              key.name === mapping.shortcut &&
-              hasMatchingModifiers(key, mapping))
+            (key.name && key.name === mapping.shortcut && hasMatchingModifiers(key, mapping))
           ) {
             key = { ...key, ...mapping };
             addShortcut = false;
@@ -290,6 +309,7 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
       if (hideCursor) cursor.show(output);
       if (onMousepress) disableMouse(output);
       if (enablePasteMode) disablePaste(output);
+      if (disableProtocol) disableProtocol();
       if (onKeypress) input.off('keypress', handleKeypress);
       if (pasteTimeout) clearTimeout(pasteTimeout);
       input.off('pause', close);
@@ -305,6 +325,12 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
 
     if (enablePasteMode === true) {
       enablePaste(output);
+    }
+
+    resetKeyboardProtocol(output);
+
+    if (keyboardProtocol) {
+      disableProtocol = enableKeyboardProtocol(detectTerminal(), output);
     }
 
     // Disable automatic character echoing
