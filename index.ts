@@ -191,6 +191,17 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
 
     // eslint-disable-next-line complexity
     async function handleKeypress(input: string, key: readline.Key) {
+      if (input === undefined && key.sequence === '\x1B[27u' && keyboardProtocol === true) {
+        key.name = 'esc';
+        key.sequence = '\x1B';
+        key.ctrl = false;
+        key.meta = false;
+        key.shift = false;
+        key.printable = false;
+        onKeypress('', key, close);
+        return;
+      }
+
       if (initialPosition && initial && key.name === 'position') {
         const parsed = parsePosition(key.sequence);
         if (parsed) {
