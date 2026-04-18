@@ -4,6 +4,18 @@
 
 Atom keybindings are defined as selector-scoped keymaps in `CSON` or `JSON`. The top-level keys are CSS selectors describing where a binding is active, and each selector maps one or more keystroke patterns to command names.
 
+### tl;dr
+
+- Modifiers: Atom examples typically use lowercase names like `ctrl`, `alt`, `cmd`, and `shift`.
+- Shortcuts: Dash-separated descriptors like `ctrl-shift-k`.
+- Chords: Space-separated shortcuts, for example `ctrl-k ctrl-d`.
+- Conditions: Expressed with CSS-like selectors such as `atom-text-editor[mini] input`, not a dedicated filter or conditional property.
+- Args: Not supported in the keymap entry itself.
+- Platform: Not supported as a first-class property. Platform-specific bindings are typically expressed with selector scopes such as `.platform-darwin`, `.platform-win32`, or `.platform-linux`.
+- Removal: `unset!` and `abort!` directive values, or setting a user override to `null`.
+- Extension bindings: defined programmatically with `atom.keymaps.add()`, or in package keymap files.
+- Other features: `unset!`, `abort!`, and `native!` are directive values, not commands.
+
 ### Keymap shape
 
 ```ts
@@ -16,6 +28,12 @@ type AtomKeymap = {
 
 In practice, the `string` command value is usually a command name such as `editor:newline` or `my-package:toggle`, but Atom also supports a few directive values such as `unset!`, `abort!`, and `native!`.
 
+### Properties
+
+- `selector` **{string}**: A CSS selector key such as `atom-workspace` or `atom-text-editor[data-grammar='source js']` that determines where the nested bindings apply.
+- `keystroke` **{string}**: A keystroke or chord such as `ctrl-shift-k` or `ctrl-k ctrl-d`.
+- `command` **{string}**: The command name to dispatch, such as `editor:delete-line`, or a directive value such as `unset!`, `abort!`, or `native!`.
+
 ### Basic examples
 
 User keymaps are usually written in `~/.atom/keymap.cson`:
@@ -25,6 +43,7 @@ User keymaps are usually written in `~/.atom/keymap.cson`:
   'ctrl-shift-k': 'editor:delete-line'
   'ctrl-alt-up': 'editor:add-selection-above'
 
+# Selectors can target specific editor types or contexts:
 'atom-text-editor[mini] input':
   'enter': 'core:confirm'
 ```
@@ -48,7 +67,7 @@ Atom also supports multi-stroke sequences:
 
 ### Context, selectors, and scopes
 
-Atom does not use a VS Code-style `when` clause. The equivalent concept is the selector on the left-hand side of the keymap.
+Atom does not support conditional expressions or filters. The equivalent concept is the selector on the left-hand side of the keymap.
 
 - `atom-workspace` makes a binding effectively global inside the editor UI.
 - `atom-text-editor` targets normal text editors.
@@ -60,14 +79,12 @@ Selectors are matched using normal CSS specificity rules. If multiple bindings m
 
 One important limitation: grammar selectors can target the editor element as a whole, but Atom keymaps do not target inner syntax scopes or token-level scopes inside `atom-text-editor`. In other words, keymaps can be grammar-aware, but not syntax-token-aware.
 
-### Commands and conditionals
+### Directives and conditionals
 
 A binding maps a keystroke to a command string. When the keystroke matches, Atom dispatches that command as a custom DOM event on the focused element.
 
 That means:
 
-- There is no first-class `args` field in the keymap entry itself.
-- There is no first-class `when` expression language separate from the selector.
 - Conditional behavior usually lives in the selector.
 - Conditional behavior can also live in command implementation code.
 - Conditional behavior can also be expressed through keymap precedence and directives such as `unset!` or `abort!`.
@@ -86,7 +103,7 @@ Examples:
 - `abort!` stops keybinding resolution entirely for that keystroke in that context.
 - `native!` forces Chromium's native handling for the keystroke.
 
-### Custom keybindings for custom extensions
+### Extension and package keybindings
 
 Atom packages can define their own commands and bind keys to them.
 
@@ -117,13 +134,6 @@ Example package keymap file:
   'ctrl-alt-l': 'example-package:log-selection'
 ```
 
-The equivalent concepts for extension authors are:
-
-- `command`: the string name like `example-package:insert-date`
-- `context`: the selector, such as `atom-text-editor` or `atom-workspace`
-- `when`: represented by the selector rather than a separate clause
-- `args`: not part of the keymap format; pass data through package state, closures, or command code instead
-
 If a package needs to create bindings dynamically, it can do so in code:
 
 ```js
@@ -136,7 +146,7 @@ atom.keymaps.add('example-package', {
 
 Atom also allows custom keystroke normalization via `atom.keymaps.addKeystrokeResolver(...)`, which is useful when Chromium reports a keyboard layout in a way that does not match the key you want to bind.
 
-### Notes for guide authors
+### Additional Notes
 
 - User overrides in `keymap.cson` are loaded last, so they can override core and package bindings.
 - The Keybinding Resolver (`Cmd+.` on macOS, `Ctrl+.` elsewhere) is the main debugging tool for conflicts and selector matching.

@@ -110,8 +110,8 @@ export const keycodes = [
   { sequence: '\x1B[3;5~', shortcut: 'fn+ctrl+delete' },
 
   // <fn+shift>
-  { sequence: '\x1B[1;2F', shortcut: 'fn+shift+right', name: 'shift+home' },
-  { sequence: '\x1B[1;2H', shortcut: 'fn+shift+left', name: 'shift+end' },
+  { sequence: '\x1B[1;2H', shortcut: 'fn+shift+right', name: 'shift+home' },
+  { sequence: '\x1B[1;2F', shortcut: 'fn+shift+left', name: 'shift+end' },
   { sequence: '\x1B[3;2~', shortcut: 'fn+shift+delete' },
 
   // <fn+meta>
@@ -208,9 +208,8 @@ export const keycodes = [
 ].map(key => ({ ...key, weight: key.weight || 0 }));
 
 export const protocols = {
-
   kitty: [
-  // Enter variants
+    // Enter variants
     { shortcut: 'enter', sequence: '\x1b[13u' },
     { shortcut: 'shift+enter', sequence: '\x1b[13;2u' },
     { shortcut: 'alt+enter', sequence: '\x1b[13;3u' },

@@ -9,6 +9,18 @@ Brackets has two layers of keyboard shortcuts:
 
 For users, the main customization entry point is `Debug > Open User Key Map`, which opens `keymap.json`. Brackets creates the file automatically if it does not already exist, and applies changes immediately when you save it.
 
+### tl;dr
+
+- Modifiers: `Ctrl`, `Cmd`, `Alt`, `Opt`, and `Shift`.
+- Shortcuts: single shortcut descriptors such as `Ctrl-Shift-D`; documented user overrides are not multi-step chords.
+- Chords: not documented for user overrides, but extensions can define multi-step sequences through the programmatic API.
+- Conditions: selector, mode, or scope properties in `keymap.json`.
+- Args: not supported in `keymap.json`.
+- Platform: optional platform property in extension bindings; user overrides typically use platform-specific modifier names such as `Cmd` on macOS.
+- Removal: set a shortcut to `null` to remove that binding.
+- Extension bindings: defined programmatically through `KeyBindingManager.addBinding()`, with optional platform and display key properties.
+- Other features: ...
+
 ### Keymap shape
 
 ```ts
@@ -20,6 +32,11 @@ type BracketsUserKeymap = {
 ```
 
 In practice, the `string` value is a command ID such as `edit.duplicate` or `me.drewh.jsbeautify`. Setting a shortcut to `null` removes that binding from the effective command keymap.
+
+### Properties
+
+- `overrides` **{Object}**: Maps shortcut descriptors to command IDs or `null`.
+- `[shortcut]` **{string | null}**: The command ID to run for that shortcut, or `null` to remove the binding.
 
 ### User keybinding file
 
@@ -42,15 +59,19 @@ The file format is a single JSON object with an `overrides` map:
 }
 ```
 
-Each key in `overrides` is a shortcut descriptor, and each value is a command ID. Setting a command ID to `null` removes that shortcut. The user key map does not support extra fields such as `when`, `context`, selector scopes, modes, or command arguments. It is strictly a shortcut-to-command override table.
+Each key in `overrides` is a shortcut descriptor, and each value is a command ID. Setting a command ID to `null` removes that shortcut. The user key map does not support extra fields. It is strictly a shortcut-to-command override table.
 
-### Key syntax and platform behavior
+### Key syntax
 
 Brackets documents shortcut descriptors as single key strings such as `Ctrl-Shift-D` or `Cmd-Opt-Right`. Supported modifier names include `Ctrl`, `Cmd`, `Alt`, `Opt`, and `Shift`, followed by a key name such as `Up`, `Down`, `Delete`, `Tab`, or a letter key.
 
-For user overrides, modifier names are platform-specific. On macOS you typically use `Cmd` instead of `Ctrl`. For built-in and programmatic bindings, Brackets maps generic `Ctrl` bindings to `Cmd` on macOS unless a platform-specific binding is supplied explicitly.
+Brackets only documents single shortcut descriptors here, not multi-step key chords.
 
-Examples:
+### Platform notes
+
+For user overrides, modifier names are platform-specific. On macOS you typically write `Cmd` in `keymap.json` instead of `Ctrl`.
+
+Example user overrides:
 
 ```json
 {
@@ -74,11 +95,11 @@ Equivalent macOS user overrides:
 }
 ```
 
-Brackets only documents single shortcut descriptors here, not multi-step key chords.
+For built-in and programmatic bindings, Brackets maps generic `Ctrl` bindings to `Cmd` on macOS unless a platform-specific binding is supplied explicitly.
 
 ### Scope and context
 
-Brackets does not expose a declarative keybinding condition language comparable to VS Code `when` clauses, Atom selectors, or Vim modes. In the user key map, a binding is global at the command layer: you map a shortcut directly to a command ID.
+Brackets does not expose a declarative condition language, selector system, or modal keybinding scope in the user key map. A binding is global at the command layer: you map a shortcut directly to a command ID.
 
 Whether a shortcut actually does anything depends on the command being available in the current UI state. Brackets also has special handling around native menus, HTML menus, and some global keydown hooks, but those are implementation details rather than user-configurable binding scopes.
 
@@ -115,6 +136,28 @@ A programmatic keybinding can be a single binding or an array, and each entry ca
 - `displayKey`
 - `platform`
 
+Extension binding shape:
+
+```ts
+type BracketsExtensionBinding =
+  | {
+      key: string
+      displayKey?: string
+      platform?: string
+    }
+  | Array<{
+      key: string
+      displayKey?: string
+      platform?: string
+    }>
+```
+
+Extension binding properties:
+
+- `key` **{string}**: The actual shortcut descriptor to bind.
+- `displayKey` **{string}**: Optional label to show in menus when it should differ from the normalized `key`.
+- `platform` **{string}**: Optional platform restriction such as `mac`.
+
 Example:
 
 ```js
@@ -139,4 +182,4 @@ KeyBindingManager.addBinding("example.command", {
 });
 ```
 
-There is still no documented extension-side equivalent of `when`, selector scopes, per-binding arguments, or modal contexts. Extensions contribute commands and shortcuts directly, and users can later override or remove those command bindings in `keymap.json`.
+Brackets does not document extension-side condition clauses, selector scopes, per-binding arguments, or modal contexts. Extensions contribute commands and shortcuts directly, and users can later override or remove those command bindings in `keymap.json`.
