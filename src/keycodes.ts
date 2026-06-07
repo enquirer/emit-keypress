@@ -205,7 +205,7 @@ export const keycodes = [
   { sequence: '\x1BOl', shortcut: 'num_key_comma' },
   { sequence: '\x1BOm', shortcut: 'num_key_minus' },
   { sequence: '\x1BOn', shortcut: 'num_key_period' }
-].map(key => ({ ...key, weight: key.weight || 0 }));
+];
 
 export const protocols = {
   kitty: [
