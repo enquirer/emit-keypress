@@ -45,7 +45,7 @@ export function isMousepress(input, key) {
 
 export const parsePosition = input => {
   if (!input) return null;
-  // eslint-disable-next-line no-control-regex
+
   const match = /^\x1B\[([0-9]+);([0-9]+)R/.exec(String(input));
 
   if (match) {
@@ -140,7 +140,7 @@ export const sortShortcutModifiers = (keymap = []) => {
   return keymap;
 };
 
-export const prioritizeKeymap = (keymap: any = []) => {
+export const prioritizeKeymap = (keymap: unknown = []) => {
   const omit = keymap
     .filter(k => k.shortcut?.startsWith('-'))
     .map(k => sortShortcutModifier(k.shortcut.slice(1)));

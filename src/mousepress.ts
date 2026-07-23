@@ -1,7 +1,7 @@
 /* eslint-disable no-control-regex */
 // Based on code from chjj/blessed
 // Copyright (c) 2013-2015, Christopher Jeffrey and contributors
-// eslint-disable-next-line complexity
+
 export const mousepress = (s: string, buf: Buffer, state = {}) => {
   let parts;
   let b;

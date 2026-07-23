@@ -1,11 +1,12 @@
 import { strict as assert } from 'node:assert';
 import { EventEmitter } from 'node:events';
+import { PassThrough } from 'node:stream';
 import { emitKeypress, emitKeypressEvents } from '../index';
 
 const initialListeners = process.listenerCount('SIGINT');
 
 function createMockInput() {
-  const input = new EventEmitter() as any;
+  const input = new EventEmitter();
   input.isTTY = true;
   input.isRaw = false;
   input.setRawMode = function(isRaw: boolean) { this.isRaw = isRaw; };
@@ -16,7 +17,7 @@ function createMockInput() {
 }
 
 function createMockOutput() {
-  const output = new EventEmitter() as any;
+  const output = new EventEmitter();
   // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
   output.write = function(sequence: string) {
     // Capture the write sequence for the sake of testing
@@ -31,7 +32,7 @@ describe('emitKeypress', () => {
 
     assert.throws(() => {
       emitKeypress({
-        input: invalidInput as any,
+        input: invalidInput,
         onKeypress: () => {}
       });
     }, /Invalid stream passed/);
@@ -57,6 +58,46 @@ describe('emitKeypress', () => {
 
     emitKeypressEvents(mockInput); // Ensure keypress events are emitted
     mockInput.emit('keypress', keySequence, key);
+  });
+
+  it('should handle keypress events from a readable stream', cb => {
+    const input = new PassThrough();
+    const output = createMockOutput();
+
+    emitKeypress({
+      input,
+      output,
+      onKeypress: (sequence, key, close) => {
+        assert.equal(sequence, '\r');
+        assert.equal(key.name, 'return');
+        close();
+        cb();
+      }
+    });
+
+    input.write('\r');
+  });
+
+  it('should restore raw mode when the readable stream supports it', () => {
+    const input = new PassThrough() as PassThrough & {
+      isRaw: boolean;
+      setRawMode: (isRaw: boolean) => void;
+    };
+    const rawModes: boolean[] = [];
+    input.isRaw = false;
+    input.setRawMode = isRaw => {
+      input.isRaw = isRaw;
+      rawModes.push(isRaw);
+    };
+
+    const close = emitKeypress({
+      input,
+      output: createMockOutput(),
+      onKeypress: () => {}
+    });
+
+    close();
+    assert.deepEqual(rawModes, [true, false]);
   });
 
   it('should handle fast consecutive keypress events', cb => {

@@ -64,8 +64,27 @@ export const hasModifier = (key: readline.Key) => {
   return key.ctrl || key.shift || key.meta || key.fn;
 };
 
+type RawModeStream = NodeJS.ReadableStream & {
+  isRaw?: boolean;
+  setRawMode?: (mode: boolean) => void;
+};
+
+const isReadableStream = (input: unknown): input is NodeJS.ReadableStream => {
+  if (!input || typeof input !== 'object') return false;
+
+  const stream = input as NodeJS.ReadableStream;
+  return (
+    typeof stream.on === 'function' &&
+    typeof stream.off === 'function' &&
+    typeof stream.once === 'function' &&
+    typeof stream.pause === 'function' &&
+    typeof stream.resume === 'function' &&
+    typeof stream.setEncoding === 'function'
+  );
+};
+
 export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) => {
-  const sessionCounts = new WeakMap<NodeJS.ReadStream, number>();
+  const sessionCounts = new WeakMap<NodeJS.ReadableStream, number>();
 
   function acquireInput(input) {
     sessionCounts.set(input, (sessionCounts.get(input) || 0) + 1);
@@ -144,14 +163,14 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
     pasteModeTimeout = 100,
     keyboardProtocol = false
   }: {
-    // eslint-disable-next-line no-undef
-    input?: NodeJS.ReadStream;
+
+    input?: NodeJS.ReadableStream;
     output?: NodeJS.WriteStream;
     keymap?: Array<{ sequence: string; shortcut: string }>;
     // eslint-disable-next-line no-unused-vars
     onKeypress: (input: string, key: readline.Key, close: () => void) => void;
     // eslint-disable-next-line no-unused-vars
-    onMousepress?: (input: string, key: any, close: () => void) => void;
+    onMousepress?: (input: string, key: unknown, close: () => void) => void;
     onExit?: () => void;
     maxPasteBuffer?: number;
     escapeCodeTimeout?: number;
@@ -162,11 +181,12 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
     pasteModeTimeout?: number;
     keyboardProtocol?: boolean;
   }) => {
-    if (!input || (input !== process.stdin && !input.isTTY)) {
+    if (!isReadableStream(input)) {
       throw new Error('Invalid stream passed');
     }
 
-    const isRaw = input.isRaw;
+    const rawModeStream = input as RawModeStream;
+    const isRaw = rawModeStream.isRaw === true;
     let closed = false;
     let pasting = false;
     let initial = true;
@@ -189,7 +209,6 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
       keymap = keymap();
     }
 
-    // eslint-disable-next-line complexity
     async function handleKeypress(input: string, key: readline.Key) {
       if (input === undefined && key.sequence === '\x1B[27u' && keyboardProtocol === true) {
         key.name = 'esc';
@@ -316,7 +335,9 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
       closed = true;
 
       onExitHandlers.delete(close);
-      if (!isWindows && input.isTTY) input.setRawMode(isRaw);
+      if (!isWindows && typeof rawModeStream.setRawMode === 'function') {
+        rawModeStream.setRawMode(isRaw);
+      }
       if (hideCursor) cursor.show(output);
       if (onMousepress) disableMouse(output);
       if (enablePasteMode) disablePaste(output);
@@ -345,7 +366,9 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
     }
 
     // Disable automatic character echoing
-    if (!isWindows && input.isTTY) input.setRawMode(true);
+    if (!isWindows && typeof rawModeStream.setRawMode === 'function') {
+      rawModeStream.setRawMode(true);
+    }
     if (hideCursor) cursor.hide(output);
     if (onKeypress) input.on('keypress', handleKeypress);
 
@@ -371,8 +394,8 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
 };
 
 export declare global {
-  var onExitHandlers: Set<() => void>; // eslint-disable-line no-var
-  var exitHandlers: Array<() => void>; // eslint-disable-line no-var
+  var onExitHandlers: Set<() => void>;
+  var exitHandlers: Array<() => void>;
 }
 
 export const { emitKeypress } = createEmitKeypress();

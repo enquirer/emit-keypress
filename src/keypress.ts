@@ -89,7 +89,6 @@ export function charLengthAt(str, i) {
   - e.g. Ctrl+Shift+S = ESC [ 115 ; 6 u (115 = 's', 6 = 1 + 1 + 4)
 */
 
-// eslint-disable-next-line complexity
 export function * emitKeys(stream) {
   while (true) {
     let ch = yield;

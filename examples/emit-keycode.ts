@@ -1,4 +1,4 @@
-/* eslint-disable no-await-in-loop */
+
 import { StringDecoder } from 'node:string_decoder';
 import { emitKeypress, keycodes } from '../index';
 
