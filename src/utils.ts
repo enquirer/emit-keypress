@@ -115,7 +115,7 @@ export const createShortcut = (key: readline.Key): string => {
   if (key.cmd || key.command) modifiers.add('cmd');
 
   let keyName = isPrintableCharacter(key.sequence) ? key.sequence : key.name;
-  if (keyName === 'undefined') keyName = '';
+  if (keyName === undefined) keyName = '';
 
   if (keyName === 'end' || keyName === 'home') {
     modifiers.delete('fn');
