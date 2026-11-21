@@ -1,5 +1,5 @@
 /* eslint-disable no-control-regex  */
-import type readline from 'node:readline';
+import type { KeyBinding, Keypress } from '~/types';
 import { stdin, stdout } from 'node:process';
 import { detectTerminal } from 'detect-terminal';
 import { emitKeypressEvents } from '~/emit-keypress';
@@ -16,14 +16,13 @@ import {
   sortShortcutModifier
 } from '~/utils';
 
-export * from '~/utils';
-
 export const isWindows = globalThis.process.platform === 'win32';
 export const MAX_PASTE_BUFFER = 1024 * 1024; // 1MB limit for paste buffer
 export const ENABLE_PASTE_BRACKET_MODE = `${kEscape}[?2004h`;
 export const DISABLE_PASTE_BRACKET_MODE = `${kEscape}[?2004l`;
 export const ENABLE_MOUSE = `${kEscape}[?1003h`;
 export const DISABLE_MOUSE = `${kEscape}[?1003l`;
+export * from '~/utils';
 
 export const enablePaste = (stdout: NodeJS.WriteStream) => {
   stdout.write(ENABLE_PASTE_BRACKET_MODE);
@@ -53,26 +52,26 @@ export const cursor = {
   }
 };
 
-export const hasMatchingModifiers = (a: readline.Key, b) => {
+export const hasMatchingModifiers = (a: Keypress, b: Keypress) => {
   return (
     (!hasModifier(a) && !hasModifier(b)) ||
     (a.ctrl === b.ctrl && a.shift === b.shift && a.meta === b.meta && a.fn === b.fn)
   );
 };
 
-export const hasModifier = (key: readline.Key) => {
+export const hasModifier = (key: Keypress) => {
   return key.ctrl || key.shift || key.meta || key.fn;
 };
 
 type RawModeStream = NodeJS.ReadableStream & {
+  readableFlowing?: boolean | null;
   isRaw?: boolean;
   setRawMode?: (mode: boolean) => void;
 };
 
-const isReadableStream = (input: unknown): input is NodeJS.ReadableStream => {
-  if (!input || typeof input !== 'object') return false;
+const isReadableStream = (stream: NodeJS.ReadableStream) => {
+  if (!stream || typeof stream !== 'object') return false;
 
-  const stream = input as NodeJS.ReadableStream;
   return (
     typeof stream.on === 'function' &&
     typeof stream.off === 'function' &&
@@ -83,20 +82,60 @@ const isReadableStream = (input: unknown): input is NodeJS.ReadableStream => {
   );
 };
 
-export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) => {
-  const sessionCounts = new WeakMap<NodeJS.ReadableStream, number>();
+const inputSessions = new WeakMap<NodeJS.ReadableStream, { count: number; wasFlowing: boolean; dispose?: () => void; restoreRaw?: () => void }>();
+const outputModes = new WeakMap<NodeJS.WriteStream, Map<string, { count: number; disable?: () => void }>>();
 
-  function acquireInput(input) {
-    sessionCounts.set(input, (sessionCounts.get(input) || 0) + 1);
+function acquireOutputMode(output: NodeJS.WriteStream, name: string, enable: () => (() => void) | null) {
+  const modes = outputModes.get(output) ?? new Map();
+  let mode = modes.get(name);
+
+  if (!mode) {
+    mode = { count: 0, disable: enable() ?? undefined };
+    modes.set(name, mode);
+    outputModes.set(output, modes);
+  }
+
+  mode.count++;
+  return () => {
+    if (--mode.count === 0) {
+      modes.delete(name);
+      if (modes.size === 0) outputModes.delete(output);
+      mode.disable?.();
+    }
+  };
+}
+
+export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) => {
+
+  function acquireInput(input, escapeCodeTimeout) {
+    let session = inputSessions.get(input);
+
+    if (!session) {
+      session = { count: 0, wasFlowing: input.readableFlowing === true, dispose: emitKeypressEvents(input, { escapeCodeTimeout: escapeCodeTimeout }) };
+      if (typeof input.setRawMode === 'function' && !input.isRaw) {
+        try {
+          input.setRawMode(true);
+        } catch (error) {
+          session.dispose?.();
+          throw error;
+        }
+        session.restoreRaw = () => input.setRawMode?.(false);
+      }
+      inputSessions.set(input, session);
+    }
+
+    session.count++;
   }
 
   function releaseInput(input) {
-    const count = sessionCounts.get(input) || 0;
-    if (count > 1) {
-      sessionCounts.set(input, count - 1);
-    } else {
-      sessionCounts.delete(input);
-      input.pause(); // actually pause only when last session closes
+    const session = inputSessions.get(input);
+    if (session && --session.count === 0) {
+      inputSessions.delete(input);
+      session.restoreRaw?.();
+      session.dispose?.();
+      if (!session.wasFlowing) {
+        input.pause();
+      }
     }
   }
 
@@ -114,20 +153,16 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
       globalThis.exitHandlers = onExitHandlers;
     }
 
-    const hasListener = (name, fn) => {
-      return process.listeners(name).includes(fn);
-    };
-
     // Register process listeners ONLY ONCE (singleton)
-    if (!hasListener('uncaughtException', onExitHandler)) {
-      process.once('uncaughtException', onExitHandler);
+    if (!process.listeners('uncaughtExceptionMonitor').includes(onExitHandler)) {
+      process.once('uncaughtExceptionMonitor', onExitHandler);
     }
 
-    if (!hasListener('SIGINT', onExitHandler)) {
+    if (setupProcessHandlers && !process.listeners('SIGINT').includes(onExitHandler)) {
       process.once('SIGINT', onExitHandler);
     }
 
-    if (!hasListener('exit', onExitHandler)) {
+    if (!process.listeners('exit').includes(onExitHandler)) {
       process.once('exit', onExitHandler);
     }
 
@@ -164,13 +199,13 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
     keyboardProtocol = false
   }: {
 
-    input?: NodeJS.ReadableStream;
+    input?: RawModeStream;
     output?: NodeJS.WriteStream;
-    keymap?: Array<{ sequence: string; shortcut: string }>;
+    keymap?: readonly KeyBinding[] | (() => readonly KeyBinding[]);
     // eslint-disable-next-line no-unused-vars
-    onKeypress: (input: string, key: readline.Key, close: () => void) => void;
+    onKeypress: (input: string, key: Keypress, close: () => void) => void;
     // eslint-disable-next-line no-unused-vars
-    onMousepress?: (input: string, key: unknown, close: () => void) => void;
+    onMousepress?: (key: ReturnType<typeof mousepress> & { mouse: true }, close: () => void) => void;
     onExit?: () => void;
     maxPasteBuffer?: number;
     escapeCodeTimeout?: number;
@@ -185,15 +220,13 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
       throw new Error('Invalid stream passed');
     }
 
-    const rawModeStream = input as RawModeStream;
-    const isRaw = rawModeStream.isRaw === true;
+    const releaseModes = [];
     let closed = false;
     let pasting = false;
     let initial = true;
     let sorted = false;
     let buffer = '';
-    let pasteTimeout: NodeJS.Timeout | null = null;
-    let disableProtocol: (() => void) | null = null;
+    let pasteTimeout = null;
 
     const clearPasteState = () => {
       pasting = false;
@@ -205,57 +238,49 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
       }
     };
 
-    if (typeof keymap === 'function') {
-      keymap = keymap();
+    let bindings = typeof keymap === 'function' ? keymap() : keymap;
+
+    function normalizedShortcut(key: Keypress) {
+      return key.shortcut ? sortShortcutModifier(key.shortcut) : createShortcut(key);
     }
 
-    async function handleKeypress(input: string, key: readline.Key) {
-      if (input === undefined && key.sequence === '\x1B[27u' && keyboardProtocol === true) {
-        key.name = 'esc';
-        key.sequence = '\x1B';
-        key.ctrl = false;
-        key.meta = false;
-        key.shift = false;
-        key.printable = false;
-        onKeypress('', key, close);
-        return;
-      }
+    function deliverKeypress(input: string, key: Keypress) {
+      onKeypress(input, { ...key, shortcut: normalizedShortcut(key) }, close);
+    }
 
-      if (initialPosition && initial && key.name === 'position') {
-        const parsed = parsePosition(key.sequence);
-        if (parsed) {
-          initial = false;
-          onKeypress('', parsed, close);
-          return;
-        }
-      }
-
-      if (key.name === 'paste-start' || /\x1B\[200~/.test(key.sequence)) {
+    function handleKeypress(input, event) {
+      let key = { ...event };
+      if (!pasting && (key.name === 'paste-start' || /\x1B\[200~/.test(key.sequence))) {
         clearPasteState();
         pasting = true;
-        pasteTimeout = setTimeout(clearPasteState, pasteModeTimeout);
+        pasteTimeout = setTimeout(() => {
+          buffer = '';
+          pasteTimeout = null;
+        }, pasteModeTimeout);
         return;
       }
 
       if (key.name === 'paste-end' || /\x1B\[201~/.test(key.sequence)) {
-        clearTimeout(pasteTimeout);
-        pasteTimeout = null;
+        const deliver = pasteTimeout !== null;
+        const sequence = buffer;
+        clearPasteState();
 
-        if (pasting) {
+        if (deliver) {
           key.name = 'paste';
-          key.sequence = buffer.replace(/\x1B\[201~/g, '');
+          key.sequence = sequence;
           key.ctrl = false;
           key.shift = false;
           key.meta = false;
           key.fn = false;
           key.printable = true;
-          onKeypress(buffer, key, close);
-          clearPasteState();
+          deliverKeypress(sequence, key);
         }
         return;
       }
 
       if (pasting) {
+        if (!pasteTimeout) return;
+        pasteTimeout.refresh();
         if (buffer.length < maxPasteBuffer) {
           buffer += key.sequence?.replace(/\r/g, '\n') || '';
         }
@@ -263,41 +288,48 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
         // Ignore any more characters, but don't clear state yet!
         return;
       }
+      if (input === undefined && key.sequence === '\x1B[27u' && keyboardProtocol === true) {
+        key.name = 'esc';
+        key.sequence = '\x1B';
+        key.ctrl = false;
+        key.meta = false;
+        key.shift = false;
+        key.printable = false;
+        deliverKeypress('', key);
+        return;
+      }
+
+      if (initialPosition && initial && key.name === 'position') {
+        const parsed = parsePosition(key.sequence);
+        if (parsed) {
+          initial = false;
+          deliverKeypress('', parsed);
+          return;
+        }
+      }
 
       if (!buffer && isMousepress(key.sequence, key)) {
         const k = mousepress(key.sequence, Buffer.from(key.sequence));
-        k.mouse = true;
-        onMousepress?.(k, close);
+        const mouse = Object.assign(k, { mouse: true as const });
+        onMousepress?.(mouse, close);
       } else {
-        let addShortcut = false;
-
         if (!sorted) {
-          keymap = prioritizeKeymap(keymap);
+          bindings = prioritizeKeymap(bindings);
           sorted = true;
         }
 
-        const found = keymap.filter(k => k.sequence === key.sequence);
+        const found = bindings.filter(k => k.sequence === key.sequence);
 
         if (found.length === 1) {
           key = { ...key, ...found[0] };
-          addShortcut = false;
         }
 
-        // console.log({ found, key });
+        const shortcut = normalizedShortcut(key);
 
-        const shortcut = key.shortcut
-          ? sortShortcutModifier(key.shortcut)
-          : createShortcut(key);
-
-        if (!key.shortcut && hasModifier(key)) {
-          key.shortcut = shortcut;
-        }
-
-        for (const mapping of keymap) {
+        for (const mapping of bindings) {
           if (mapping.sequence) {
             if (key.sequence === mapping.sequence && hasMatchingModifiers(key, mapping)) {
               key = { ...key, ...mapping };
-              addShortcut = false;
               break;
             }
 
@@ -310,70 +342,71 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
             (key.name && key.name === mapping.shortcut && hasMatchingModifiers(key, mapping))
           ) {
             key = { ...key, ...mapping };
-            addShortcut = false;
             break;
           }
         }
 
-        if (/^f[0-9]+$/.test(key.name)) {
-          addShortcut = true;
-        }
-
-        if (addShortcut) {
-          key.shortcut ||= shortcut;
-        }
-
         key.printable ||= isPrintableCharacter(key.sequence);
-        onKeypress(key.sequence, key, close);
+        deliverKeypress(key.sequence, key);
       }
     }
 
-    acquireInput(input);
+    acquireInput(input, escapeCodeTimeout);
 
     function close() {
       if (closed) return;
       closed = true;
 
       onExitHandlers.delete(close);
-      if (!isWindows && typeof rawModeStream.setRawMode === 'function') {
-        rawModeStream.setRawMode(isRaw);
+      for (const release of releaseModes) {
+        release();
       }
-      if (hideCursor) cursor.show(output);
-      if (onMousepress) disableMouse(output);
-      if (enablePasteMode) disablePaste(output);
-      if (disableProtocol) disableProtocol();
       if (onKeypress) input.off('keypress', handleKeypress);
       if (pasteTimeout) clearTimeout(pasteTimeout);
-      input.off('pause', close);
+      input.off('end', close);
+      input.off('close', close);
       releaseInput(input);
       onExit?.();
     }
 
-    emitKeypressEvents(input, { escapeCodeTimeout });
+    try {
+      if (onMousepress) {
+        releaseModes.push(acquireOutputMode(output, 'mouse', () => {
+          enableMouse(output);
+          return () => disableMouse(output);
+        }));
+      }
 
-    if (onMousepress) {
-      enableMouse(output);
+      if (enablePasteMode) {
+        releaseModes.push(acquireOutputMode(output, 'paste', () => {
+          enablePaste(output);
+          return () => disablePaste(output);
+        }));
+      }
+
+      if (keyboardProtocol) {
+        releaseModes.push(acquireOutputMode(output, 'keyboard', () => {
+          resetKeyboardProtocol(output);
+          return enableKeyboardProtocol(detectTerminal(), output);
+        }));
+      }
+
+      if (hideCursor) {
+        releaseModes.push(acquireOutputMode(output, 'cursor', () => {
+          cursor.hide(output);
+          return () => cursor.show(output);
+        }));
+      }
+    } catch (error) {
+      close();
+      throw error;
     }
 
-    if (enablePasteMode === true) {
-      enablePaste(output);
-    }
-
-    resetKeyboardProtocol(output);
-
-    if (keyboardProtocol) {
-      disableProtocol = enableKeyboardProtocol(detectTerminal(), output);
-    }
-
-    // Disable automatic character echoing
-    if (!isWindows && typeof rawModeStream.setRawMode === 'function') {
-      rawModeStream.setRawMode(true);
-    }
-    if (hideCursor) cursor.hide(output);
     if (onKeypress) input.on('keypress', handleKeypress);
 
     input.setEncoding('utf8');
-    input.once('pause', close);
+    input.once('end', close);
+    input.once('close', close);
     input.resume();
 
     if (initialPosition) {
@@ -393,9 +426,9 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
   };
 };
 
-export declare global {
+declare global {
   var onExitHandlers: Set<() => void>;
-  var exitHandlers: Array<() => void>;
+  var exitHandlers: Set<() => void>;
 }
 
 export const { emitKeypress } = createEmitKeypress();

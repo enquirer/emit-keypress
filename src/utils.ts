@@ -1,7 +1,8 @@
 /* eslint-disable no-control-regex */
-import type readline from 'node:readline';
+import type { KeyBinding, Keypress } from '~/types';
+
 export const PRINTABLE_CHAR_REGEX = /^(?!.*[\uFEFF])[\p{L}\p{N}\p{P}\p{S}\p{Z}\p{M}\u200D\s]+$/u;
-export const NON_PRINTABLE_CHAR_REGEX = /[\p{Cc}\p{Cf}\u2028\u2029]/u;
+export const NON_PRINTABLE_CHAR_REGEX = /[\p{Cc}\u2028\u2029]|(?!\u200D)\p{Cf}/u;
 
 export const metaKeys = new Set(['alt', 'meta', 'option']);
 export const modifierKeys = new Set(['fn', 'ctrl', 'shift', ...[...metaKeys], 'cmd']);
@@ -10,6 +11,7 @@ export const sortOrder = [
   'name',
   'shortcut',
   'command',
+  'action',
   'ctrl',
   'shift',
   'alt',
@@ -21,11 +23,11 @@ export const sortOrder = [
   'weight'
 ];
 
-export const isBuiltIn = k => !k.weight || k.weight <= 0;
+export const isBuiltIn = (k: Pick<KeyBinding, 'weight'>) => !k.weight || k.weight <= 0;
 
 // Based on isMouse from chjj/blessed
 // Copyright (c) 2013-2015, Christopher Jeffrey and contributors
-export function isMousepress(input, key) {
+export function isMousepress(input: unknown, key?: Pick<Keypress, 'code'> | null) {
   if (key?.code && (key.code === '[M' || key.code === '[I' || key.code === '[O')) {
     return true;
   }
@@ -43,7 +45,7 @@ export function isMousepress(input, key) {
     || /\x1b\[(O|I)/.test(input);
 }
 
-export const parsePosition = input => {
+export const parsePosition = (input: unknown) => {
   if (!input) return null;
 
   const match = /^\x1B\[([0-9]+);([0-9]+)R/.exec(String(input));
@@ -59,7 +61,7 @@ export const parsePosition = input => {
   return null;
 };
 
-export const sortKeys = (obj, keys = sortOrder) => {
+export const sortKeys = <T extends Record<string, unknown>>(obj: T, keys = sortOrder) => {
   const ordered = {};
 
   for (const key of keys) {
@@ -74,12 +76,12 @@ export const sortKeys = (obj, keys = sortOrder) => {
     }
   }
 
-  return ordered;
+  return ordered as T;
 };
 
 const normalizeModifier = (key: string) => {
-  if (key === 'cmd') return 'meta';
-  if (key === 'option') return 'alt';
+  if (key === 'alt') return 'meta';
+  if (key === 'option') return 'meta';
   if (key === 'control') return 'ctrl';
   if (key === 'command') return 'cmd';
   return key;
@@ -105,42 +107,41 @@ export const sortModifiers = (names: string[]): string[] => {
   return modifiers.concat(after);
 };
 
-export const createShortcut = (key: readline.Key): string => {
-  const modifiers = new Set();
+export const createShortcut = (key: Keypress): string => {
+  const modifiers = [];
 
-  if (key.fn) modifiers.add('fn');
-  if (key.shift) modifiers.add('shift');
-  if (key.alt || key.option || key.meta) modifiers.add('meta');
-  if (key.ctrl || key.control) modifiers.add('ctrl');
-  if (key.cmd || key.command) modifiers.add('cmd');
+  let keyName = key.sequence && isPrintableCharacter(key.sequence) ? key.sequence : key.name ?? '';
+  if (keyName === 'undefined') keyName = '';
 
-  let keyName = isPrintableCharacter(key.sequence) ? key.sequence : key.name;
-  if (keyName === undefined) keyName = '';
+  if (key.fn && keyName !== 'end' && keyName !== 'home') modifiers.push('fn');
+  if (key.shift) modifiers.push('shift');
+  if (key.alt || key.option || key.meta) modifiers.push('meta');
+  if (key.ctrl || key.control) modifiers.push('ctrl');
+  if (key.cmd || key.command) modifiers.push('cmd');
 
-  if (keyName === 'end' || keyName === 'home') {
-    modifiers.delete('fn');
-  }
-
-  const output = modifiers.size > 0 && keyName
-    ? `${sortModifiers([...modifiers]).join('+')}+${keyName}`
+  const output = modifiers.length > 0 && keyName
+    ? `${sortModifiers(modifiers).join('+')}+${keyName}`
     : keyName;
 
-  return output.length > 1 ? output : '';
+  const result = output.length > 1 ? output : '';
+  return result.toLowerCase();
 };
 
-export const sortShortcutModifier = shortcut => {
+export const sortShortcutModifier = (shortcut: string) => {
   return sortModifiers(shortcut.split('+')).join('+');
 };
 
-export const sortShortcutModifiers = (keymap = []) => {
+export const sortShortcutModifiers = <T extends { shortcut: string }>(keymap: readonly T[] = []) => {
+  const bindings = [];
+
   for (const key of keymap) {
-    key.shortcut = sortShortcutModifier(key.shortcut);
+    bindings.push({ ...key, shortcut: sortShortcutModifier(key.shortcut) });
   }
 
-  return keymap;
+  return bindings;
 };
 
-export const prioritizeKeymap = (keymap: unknown = []) => {
+export const prioritizeKeymap = <T extends KeyBinding>(keymap: readonly T[] = []) => {
   const omit = keymap
     .filter(k => k.shortcut?.startsWith('-'))
     .map(k => sortShortcutModifier(k.shortcut.slice(1)));
@@ -149,15 +150,15 @@ export const prioritizeKeymap = (keymap: unknown = []) => {
     .filter(k => !isBuiltIn(k) || !omit.includes(k.shortcut));
 
   bindings.sort((a, b) => {
-    a.weight ||= 0;
-    b.weight ||= 0;
-    return a.weight === b.weight ? 0 : b.weight > a.weight ? 1 : -1;
+    const aWeight = a.weight ?? 0;
+    const bWeight = b.weight ?? 0;
+    return aWeight === bWeight ? 0 : bWeight > aWeight ? 1 : -1;
   });
 
   return bindings.filter(b => b.weight !== -1);
 };
 
 // Unicode ranges for general printable characters including emojis
-export const isPrintableCharacter = s => {
+export const isPrintableCharacter = (s?: string | null) => {
   return s ? PRINTABLE_CHAR_REGEX.test(s) && !NON_PRINTABLE_CHAR_REGEX.test(s) : false;
 };

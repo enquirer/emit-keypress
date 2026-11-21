@@ -1,10 +1,5 @@
+import type { KeyboardProtocol } from '~/types';
 import { kEscape } from '~/keypress';
-
-export interface KeyboardProtocol {
-  name: 'kitty' | 'mok';
-  enable: string;
-  disable: string;
-}
 
 export const KITTY_PROTOCOL: KeyboardProtocol = {
   name: 'kitty',

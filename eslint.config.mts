@@ -22,7 +22,7 @@ export default defineConfig([
   ]),
   tseslint.configs.recommended,
   {
-    files: ['**/*.{mjs,ts,mts}'],
+    files: ['**/*.{mjs,ts,mts,cts}'],
     plugins: { js },
     extends: ['js/recommended'],
     languageOptions: {

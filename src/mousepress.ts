@@ -17,7 +17,8 @@ export const mousepress = (s: string, buf: Buffer, state = {}) => {
     name: undefined,
     ctrl: false,
     meta: false,
-    shift: false
+    shift: false,
+    fn: false
   };
 
   if (Buffer.isBuffer(s)) {
