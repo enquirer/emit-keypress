@@ -17,21 +17,40 @@ const ESCAPE_CODE_TIMEOUT = 500;
  * accepts a readable Stream instance and makes it emit "keypress" events
  */
 
-export function emitKeypressEvents(stream, iface = {}) {
+export function emitKeypressEvents(stream: NodeJS.ReadableStream & {
+  [KEYPRESS_DECODER]?: StringDecoder;
+  [ESCAPE_DECODER]?: ReturnType<typeof emitKeys>;
+}, iface: {
+  escapeCodeTimeout?: number;
+  isCompletionEnabled?: boolean;
+  [kSawKeyPress]?: boolean;
+} = {}) {
   if (stream[KEYPRESS_DECODER]) return;
 
-  stream[KEYPRESS_DECODER] = new StringDecoder('utf8');
+  const decoder = stream[KEYPRESS_DECODER] = new StringDecoder('utf8');
+  let keys = stream[ESCAPE_DECODER] = emitKeys(stream);
+  keys.next();
 
-  stream[ESCAPE_DECODER] = emitKeys(stream);
-  stream[ESCAPE_DECODER].next();
-
-  const triggerEscape = () => stream[ESCAPE_DECODER].next('');
   const { escapeCodeTimeout = ESCAPE_CODE_TIMEOUT } = iface;
   let timeoutId;
+  let disposed = false;
+
+  function readCharacter(character: string) {
+    try {
+      keys.next(character);
+    } catch (err) {
+      if (!disposed) {
+        keys = stream[ESCAPE_DECODER] = emitKeys(stream);
+        keys.next();
+      }
+
+      throw err;
+    }
+  }
 
   function onData(input) {
     if (stream.listenerCount('keypress') > 0) {
-      const string = stream[KEYPRESS_DECODER].write(input);
+      const string = typeof input === 'string' ? input : decoder.write(input);
       if (string) {
         clearTimeout(timeoutId);
 
@@ -47,18 +66,13 @@ export function emitKeypressEvents(stream, iface = {}) {
             iface.isCompletionEnabled = true;
           }
 
-          try {
-            stream[ESCAPE_DECODER].next(character);
-            // Escape letter at the tail position
-            if (length === string.length && character === kEscape) {
-              timeoutId = setTimeout(triggerEscape, escapeCodeTimeout);
-            }
-          } catch (err) {
-            // If the generator throws (it could happen in the `keypress`
-            // event), we need to restart it.
-            stream[ESCAPE_DECODER] = emitKeys(stream);
-            stream[ESCAPE_DECODER].next();
-            throw err;
+          readCharacter(character);
+          if (disposed) {
+            return;
+          }
+
+          if (length === string.length && character === kEscape) {
+            timeoutId = setTimeout(readCharacter, escapeCodeTimeout, '');
           }
         }
       }
@@ -81,5 +95,18 @@ export function emitKeypressEvents(stream, iface = {}) {
   } else {
     stream.on('newListener', onNewListener);
   }
+
+  return () => {
+    if (disposed) {
+      return;
+    }
+
+    disposed = true;
+    clearTimeout(timeoutId);
+    stream.off('data', onData);
+    stream.off('newListener', onNewListener);
+    delete stream[KEYPRESS_DECODER];
+    delete stream[ESCAPE_DECODER];
+  };
 }
 

@@ -8,7 +8,10 @@ When editing files, don't delete the file first. Make targeted patches, otherwis
 
 Never run git commands.
 
-Stat files before editing to check if they have changed since you last read them. If they have, read them again before making any edits.
+## Invariants
+
+- Keypress objects should be immutable.
+
 
 ---
 
