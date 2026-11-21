@@ -105,6 +105,23 @@ function acquireOutputMode(output: NodeJS.WriteStream, name: string, enable: () 
   };
 }
 
+export interface EmitKeypressOptions {
+  input?: RawModeStream;
+  output?: NodeJS.WriteStream;
+  keymap?: readonly KeyBinding[] | (() => readonly KeyBinding[]);
+  onKeypress: (input: string, key: Readonly<Keypress>, close: () => void) => void;
+  onMousepress?: (key: Readonly<ReturnType<typeof mousepress> & { mouse: true }>, close: () => void) => void;
+  onExit?: () => void;
+  maxPasteBuffer?: number;
+  escapeCodeTimeout?: number;
+  handleClose?: boolean;
+  hideCursor?: boolean;
+  initialPosition?: boolean;
+  enablePasteMode?: boolean;
+  pasteModeTimeout?: number;
+  keyboardProtocol?: boolean;
+}
+
 export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) => {
 
   function acquireInput(input, escapeCodeTimeout) {
@@ -197,25 +214,7 @@ export const createEmitKeypress = (config?: { setupProcessHandlers?: boolean }) 
     enablePasteMode = false,
     pasteModeTimeout = 100,
     keyboardProtocol = false
-  }: {
-
-    input?: RawModeStream;
-    output?: NodeJS.WriteStream;
-    keymap?: readonly KeyBinding[] | (() => readonly KeyBinding[]);
-    // eslint-disable-next-line no-unused-vars
-    onKeypress: (input: string, key: Keypress, close: () => void) => void;
-    // eslint-disable-next-line no-unused-vars
-    onMousepress?: (key: ReturnType<typeof mousepress> & { mouse: true }, close: () => void) => void;
-    onExit?: () => void;
-    maxPasteBuffer?: number;
-    escapeCodeTimeout?: number;
-    handleClose?: boolean;
-    hideCursor?: boolean;
-    initialPosition?: boolean;
-    enablePasteMode?: boolean;
-    pasteModeTimeout?: number;
-    keyboardProtocol?: boolean;
-  }) => {
+  }: EmitKeypressOptions): (() => void) => {
     if (!isReadableStream(input)) {
       throw new Error('Invalid stream passed');
     }

@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
+  "types": "./dist/index.d.ts",
   "homepage": "https://github.com/enquirer/emit-keypress",
   "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
   "repository": {
@@ -26,12 +27,24 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./*": {
-      "import": "./dist/src/*.js",
-      "require": "./dist/src/*.cjs"
+      "import": {
+        "types": "./dist/src/*.d.ts",
+        "default": "./dist/src/*.js"
+      },
+      "require": {
+        "types": "./dist/src/*.d.cts",
+        "default": "./dist/src/*.cjs"
+      }
     }
   },
   "devDependencies": {
@@ -48,6 +61,7 @@
     "tsconfig-paths": "^4.2.0",
     "tsup": "9.0.0",
     "tsx": "4.23.15",
+    "typescript": "^5.9.3",
     "typescript-eslint": "8.73.0"
   },
   "keywords": [
