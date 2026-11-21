@@ -1,7 +1,7 @@
 {
   "name": "emit-keypress",
   "description": "Drop-dead simple keypress event emitter for Node.js. Create powerful CLI applications and experiences with ease.",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
