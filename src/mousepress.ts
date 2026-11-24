@@ -320,7 +320,7 @@ export const mousepress = (s: string, buf: Buffer, state = {}) => {
     }
 
     key.action = 'mousedown';
-    key.button = b === 1 ? 'left' : b === 2 ? 'middle' : b === 5 ? 'right' : 'unknown';
+    key.button = b === 1 ? 'left' : b === 3 ? 'middle' : b === 5 ? 'right' : 'unknown';
 
     key.sequence = s;
     return key;

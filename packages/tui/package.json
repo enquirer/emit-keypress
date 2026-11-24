@@ -1,0 +1,9 @@
+{
+  "name": "@enquirer/tui",
+  "private": true,
+  "type": "module",
+  "exports": "./index.js",
+  "dependencies": {
+    "emit-keypress": "file:../.."
+  }
+}

@@ -32,8 +32,8 @@ describe('utils', () => {
 
   describe('isMousepress', () => {
     for (const code of ['[M', '[I', '[O']) {
-      it('recognizes mouse or focus key code ' + code + ' without string input', () => {
-        assert.equal(isMousepress(undefined, { code }), true, 'expected the key code alone to match');
+      it('rejects mouse or focus key code ' + code + ' without string input', () => {
+        assert.equal(isMousepress(undefined, { code }), false, 'expected a complete input sequence');
       });
     }
 
@@ -45,8 +45,7 @@ describe('utils', () => {
       ['DEC locator input', '\x1b[<1;2;3;4&w'],
       ['VT300 mouse input', '\x1b[241~[12,8]\r'],
       ['focus-in input', '\x1b[I'],
-      ['focus-out input', '\x1b[O'],
-      ['an embedded mouse report', 'before\x1b[<0;12;8Mafter']
+      ['focus-out input', '\x1b[O']
     ]) {
       it('recognizes ' + title, () => {
         assert.equal(isMousepress(input), true, 'expected the report to be recognized');
@@ -54,6 +53,7 @@ describe('utils', () => {
     }
 
     for (const [title, input] of [
+      ['an embedded mouse report', 'before\x1b[<0;12;8Mafter'],
       ['empty input', ''], ['ordinary text', 'mouse'], ['an arrow sequence', '\x1b[A'],
       ['an incomplete SGR report', '\x1b[<0;12;'], ['a report without Escape', '[<0;12;8M'],
       ['undefined input', undefined], ['null input', null], ['numeric input', 42],

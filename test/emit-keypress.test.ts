@@ -2,6 +2,7 @@ import childProcess from 'node:child_process';
 import { strict as assert } from 'node:assert';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
+import nodeTest from 'node:test';
 import { emitKeypress, emitKeypressEvents } from '../index';
 
 const initialListeners = process.listenerCount('SIGINT');
@@ -511,6 +512,237 @@ describe('keypress input', () => {
     });
   });
 
+  describe('emitKeypressEvents input framing', () => {
+    let input;
+    let events;
+    let dispose;
+
+    beforeEach(() => {
+      input = new PassThrough();
+      events = [];
+      input.on('keypress', (value, key) => events.push({ value, key }));
+      dispose = emitKeypressEvents(input, { escapeCodeTimeout: 20 });
+    });
+
+    afterEach(() => {
+      dispose();
+      input.destroy();
+    });
+
+    const shiftMeta = { shift: true, meta: true };
+    const ctrlMeta = { ctrl: true, meta: true };
+    const modifiedKeys = [];
+    for (const [parameter, flags] of [[10, shiftMeta], [13, ctrlMeta], [14, { ...ctrlMeta, shift: true }]]) {
+      for (const [final, name, fn] of [
+        ['A', 'up', false], ['B', 'down', false], ['C', 'right', false], ['D', 'left', false],
+        ['F', 'right', true], ['H', 'left', true],
+        ['P', 'f1', true], ['Q', 'f2', true], ['R', 'f3', true], ['S', 'f4', true]
+      ]) {
+        modifiedKeys.push([name + ' with modifier ' + parameter, '\x1b[1;' + parameter + final, { name, fn, ...flags }]);
+      }
+      modifiedKeys.push(['delete with modifier ' + parameter, '\x1b[3;' + parameter + '~', { name: 'delete', fn: true, ...flags }]);
+    }
+    for (const [parameter, flags] of [[10, shiftMeta], [14, { ...ctrlMeta, shift: true }]]) {
+      for (const [code, name] of [[5, 'up'], [6, 'down']]) {
+        modifiedKeys.push(['fn+' + name + ' with modifier ' + parameter, '\x1b[' + code + ';' + parameter + '~', { name, fn: true, ...flags }]);
+      }
+    }
+    for (const [code, name] of [[15, 'f5'], [17, 'f6'], [18, 'f7'], [19, 'f8'], [20, 'f9'], [21, 'f10'], [23, 'f11'], [24, 'f12']]) {
+      modifiedKeys.push([name + ' with modifier 10', '\x1b[' + code + ';10~', { name, fn: true, ...shiftMeta }]);
+    }
+
+    for (const [title, sequence, modifiers] of [
+      ...modifiedKeys,
+      ['CSI-u Ctrl+Shift+S', '\x1b[115;6u', { name: 's', ctrl: true, shift: true }],
+      ['CSI-u supplementary Unicode scalar', '\x1b[127800;1u', { name: '🌸' }],
+      ['CSI-u surrogate', '\x1b[55296;1u', { name: undefined }],
+      ['CSI-u out-of-range code point', '\x1b[1114112;1u', { name: undefined }],
+      ['SS3 F1', '\x1bOP', { name: 'f1', fn: true }],
+      ['double-bracket F1', '\x1b[[A', { name: 'f1', fn: true }],
+      ['rxvt Shift+Delete', '\x1b[3$', { name: 'delete', shift: true }],
+      ['a cursor-position reply', '\x1b[123;456R', null],
+      ['a private device-attributes reply', '\x1b[?62;4;22c', null],
+      ['a BEL-terminated OSC reply', '\x1b]10;rgb:aaaa/bbbb/cccc\x07', null],
+      ['a DCS reply', '\x1bP1$r0m\x1b\\', null],
+      ['an unfamiliar CSI with an intermediate byte', '\x1b[?42;19 z', null],
+      ['modifyOtherKeys Ctrl+A', '\x1b[27;5;97~', { name: 'a', ctrl: true, meta: false, shift: false, fn: false }],
+      ['Shift+F3', '\x1b[1;2R', { name: 'f3', ctrl: false, meta: false, shift: true, fn: true }],
+      ['an OSC reply with a string terminator', '\x1b]10;rgb:aaaa/bbbb/cccc\x1b\\', null]
+    ]) {
+      it('frames ' + title + ' followed by x at every split point', () => {
+        const data = sequence + 'x';
+        const partitions = [[data], [...data]];
+        for (let i = 1; i < data.length; i++) {
+          partitions.push([data.slice(0, i), data.slice(i)]);
+        }
+
+        for (const chunks of partitions) {
+          events.length = 0;
+          for (const chunk of chunks) {
+            input.write(chunk);
+          }
+
+          const context = JSON.stringify(chunks);
+          assert.deepEqual(events.map(({ key }) => key.sequence), [sequence, 'x'], context);
+          assert.equal(events[0].value, undefined, context);
+          if (modifiers) {
+            const { name, ctrl, meta, shift, fn } = events[0].key;
+            assert.deepEqual({ name, ctrl, meta, shift, fn }, { ctrl: false, meta: false, shift: false, fn: false, ...modifiers }, context);
+          }
+          assert.equal(events[1].value, 'x', context);
+          assert.equal(events[1].key.name, 'x', context);
+        }
+      });
+    }
+
+    it('reads Up and x after Escape interrupts an incomplete CSI', () => {
+      input.write('\x1b[12;');
+      input.write('\x1b[Ax');
+      assert.deepEqual(events.map(({ key }) => [key.sequence, key.name]), [
+        ['\x1b[A', 'up'],
+        ['x', 'x']
+      ]);
+    });
+
+    it('delivers a key on a second stream while an OSC terminator is pending', () => {
+      const second = new PassThrough();
+      const keys = [];
+      second.on('keypress', (value, key) => keys.push([key.sequence, key.name]));
+      const disposeSecond = emitKeypressEvents(second);
+      const prefix = '\x1b]10;rgb:aaaa/bbbb/cccc\x1b';
+
+      try {
+        input.write(prefix);
+        second.write('y');
+        assert.deepEqual(keys, [['y', 'y']]);
+        assert.deepEqual(events, []);
+
+        input.write('\\x');
+        assert.deepEqual(events.map(({ key }) => key.sequence), [prefix + '\\', 'x']);
+        assert.equal(events[1].key.name, 'x');
+        assert.deepEqual(keys, [['y', 'y']]);
+      } finally {
+        disposeSecond();
+        second.destroy();
+      }
+    });
+
+    it('delivers a diverging closing delimiter as paste text and resumes key input after paste-end', () => {
+      input.write('\x1b[200~\x1b[20');
+      input.write('x\x1b[201~x');
+      assert.deepEqual(events.map(({ key }) => [key.sequence, key.name]), [
+        ['\x1b[200~', 'paste-start'],
+        ['\x1b[20x', undefined],
+        ['\x1b[201~', 'paste-end'],
+        ['x', 'x']
+      ]);
+      assert.equal(events[1].value, '\x1b[20x');
+    });
+
+    it('discards an oversized OSC reply through its terminator and delivers the next key', () => {
+      input.write('\x1b]' + 'a'.repeat(65_536));
+      input.write('tail\x07x');
+      assert.deepEqual(events.map(({ key }) => [key.sequence, key.name]), [['x', 'x']]);
+    });
+
+    it('delivers the next key after an unterminated reply has been idle for five seconds', () => {
+      const { timers } = nodeTest.mock;
+      timers.enable({ apis: ['setTimeout'] });
+      try {
+        input.write('\x1bPpending');
+        timers.tick(5000);
+        input.write('x');
+        assert.deepEqual(events.map(({ key }) => [key.sequence, key.name]), [['x', 'x']]);
+      } finally {
+        timers.reset();
+      }
+    });
+
+    it('refreshes the DCS idle deadline when a fragment arrives', () => {
+      const { timers } = nodeTest.mock;
+      timers.enable({ apis: ['setTimeout'] });
+      try {
+        input.write('\x1bP1$r');
+        timers.tick(4000);
+        input.write('0m');
+        timers.tick(4000);
+        input.write('\x1b\\x');
+        assert.deepEqual(events.map(({ value, key }) => [value, key.sequence]), [
+          [undefined, '\x1bP1$r0m\x1b\\'], ['x', 'x']
+        ]);
+      } finally {
+        timers.reset();
+      }
+    });
+
+    it('releases an oversized unterminated OSC after five idle seconds', () => {
+      const { timers } = nodeTest.mock;
+      timers.enable({ apis: ['setTimeout'] });
+      try {
+        input.write('\x1b]' + 'a'.repeat(65_536));
+        timers.tick(4999);
+        input.write('still payload');
+        timers.tick(5000);
+        input.write('x');
+        assert.deepEqual(events.map(({ value, key }) => [value, key.sequence, key.name]), [['x', 'x', 'x']]);
+      } finally {
+        timers.reset();
+      }
+    });
+
+    for (const size of [65_536, 65_537]) {
+      it('applies the OSC limit to a ' + size + '-code-unit reply', () => {
+        const sequence = '\x1b]' + '🌸'.repeat(32_766) + 'a'.repeat(size - 65_535) + '\x07';
+        assert.equal(sequence.length, size);
+        input.write(sequence + 'x');
+        const expected = size === 65_536 ? [[undefined, sequence], ['x', 'x']] : [['x', 'x']];
+        assert.deepEqual(events.map(({ value, key }) => [value, key.sequence]), expected);
+      });
+    }
+
+    for (const [title, pending, expected] of [
+      ['lone Escape', '\x1b', [[undefined, '\x1b', 'escape']]],
+      ['incomplete CSI', '\x1b[123;', []],
+      ['unterminated OSC', '\x1b]10;color', []],
+      ['unterminated DCS', '\x1bP1$r\x1b', []],
+      ['incomplete UTF-8 character', Buffer.from([0xf0, 0x9f]), [['\ufffd', '\ufffd', undefined]]]
+    ]) {
+      it('resolves stream end with ' + title, async () => {
+        const ended = new Promise(resolve => input.once('end', resolve));
+        input.write(pending);
+        assert.deepEqual(events, []);
+        input.end();
+        await ended;
+        assert.deepEqual(events.map(({ value, key }) => [value, key.sequence, key.name]), expected);
+      });
+    }
+
+    it('delivers a partial paste-closing delimiter literally on stream end', async () => {
+      const ended = new Promise(resolve => input.once('end', resolve));
+      input.write('\x1b[200~');
+      input.write('\x1b[20');
+      assert.deepEqual(events.map(({ key }) => [key.sequence, key.name]), [['\x1b[200~', 'paste-start']]);
+      input.end();
+      await ended;
+      assert.deepEqual(events.slice(1).map(({ value, key }) => [value, key.sequence, key.name]), [
+        ['\x1b[20', '\x1b[20', undefined]
+      ]);
+    });
+
+    it('cancels pending Escape delivery on disposal', () => {
+      const { timers } = nodeTest.mock;
+      timers.enable({ apis: ['setTimeout'] });
+      try {
+        input.write('\x1b');
+        dispose();
+        timers.tick(20);
+        assert.deepEqual(events, []);
+      } finally {
+        timers.reset();
+      }
+    });
+  });
+
   describe('emitKeypressEvents escape timeouts', () => {
     let input;
     let keys;
@@ -581,13 +813,13 @@ describe('keypress input', () => {
       });
     }
 
-    it('reads the Escape from a Down arrow as part of the pending CSI sequence', async () => {
+    it('reads a Down arrow after it interrupts a pending CSI sequence', async () => {
       input.write('\x1b');
       input.write('[1;');
       await new Promise(resolve => setTimeout(resolve, 80));
       assert.equal(keys.length, 0, 'expected the CSI prefix to wait for another character');
       input.write('\x1b[B');
-      assert.deepEqual(keys.map(key => key.sequence), ['\x1b[1;\x1b', '[', 'B'], 'expected the bracket and B as separate keypresses');
+      assert.deepEqual(keys.map(key => key.sequence), ['\x1b[B'], 'expected one complete Down arrow');
     });
 
     it('reads an Alt character before the Escape timeout expires', async () => {

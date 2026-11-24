@@ -27,22 +27,8 @@ export const isBuiltIn = (k: Pick<KeyBinding, 'weight'>) => !k.weight || k.weigh
 
 // Based on isMouse from chjj/blessed
 // Copyright (c) 2013-2015, Christopher Jeffrey and contributors
-export function isMousepress(input: unknown, key?: Pick<Keypress, 'code'> | null) {
-  if (key?.code && (key.code === '[M' || key.code === '[I' || key.code === '[O')) {
-    return true;
-  }
-
-  if (typeof input !== 'string') {
-    return false;
-  }
-
-  return /\x1b\[M/.test(input)
-    || /\x1b\[M([\x00\u0020-\uffff]{3})/.test(input)
-    || /\x1b\[(\d+;\d+;\d+)M/.test(input)
-    || /\x1b\[<(\d+;\d+;\d+)([mM])/.test(input)
-    || /\x1b\[<(\d+;\d+;\d+;\d+)&w/.test(input)
-    || /\x1b\[24([0135])~\[(\d+),(\d+)\]\r/.test(input)
-    || /\x1b\[(O|I)/.test(input);
+export function isMousepress(input: unknown, _key?: Pick<Keypress, 'code'> | null) {
+  return typeof input === 'string' && /^\x1b\[(?:M[\s\S]{3}|\d+;\d+;\d+M|<\d+;\d+;\d+[Mm]|<\d+;\d+;\d+;\d+&w|24[0135]~\[\d+,\d+\]\r|[IO])$/u.test(input);
 }
 
 export const parsePosition = (input: unknown) => {
